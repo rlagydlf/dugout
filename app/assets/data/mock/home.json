@@ -1,0 +1,35 @@
+{
+  "matchup": {
+    "homeTeamId": "lg",
+    "awayTeamId": "doosan",
+    "status": "live",
+    "time": "18:30",
+    "seriesLabel": "시리즈 1차전",
+    "stadium": "잠실야구장",
+    "homeScore": 3,
+    "awayScore": 2,
+    "inning": 5,
+    "isTopInning": false,
+    "homePitcher": "임찬규",
+    "awayPitcher": "곽빈"
+  },
+  "stats": {
+    "todaySortieCount": 12408,
+    "activePredictions": 3,
+    "teamContribution": "78%"
+  },
+  "rivalry": {
+    "rivalTeamId": "doosan",
+    "ourFraction": 0.62
+  },
+  "liveInsight": {
+    "phase": "5회 말",
+    "team": "LG 공격 중",
+    "nextBatter": "오스틴"
+  },
+  "news": [
+    { "icon": "scoreboard", "title": "오늘의 시리즈", "subtitle": "LG vs 두산 잠실 1차전" },
+    { "icon": "stadium", "title": "이번 주 미션", "subtitle": "도전 미션 3개 진행 중" },
+    { "icon": "baseball", "title": "오스틴 키플레이어", "subtitle": "3안타 1홈런 페이스" }
+  ]
+}

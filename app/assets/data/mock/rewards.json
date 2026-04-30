@@ -1,0 +1,16 @@
+{
+  "rewards": [
+    { "id": "r1", "name": "스타벅스 아메리카노 T", "category": "기프티콘", "price": 4500, "icon": "coffee", "stock": null, "hot": true, "featured": true },
+    { "id": "r2", "name": "CGV 영화 1매", "category": "제휴 쿠폰", "price": 8500, "icon": "movie", "stock": null, "hot": true, "featured": false },
+    { "id": "r3", "name": "응원봉 야광 스페셜", "category": "야구용품", "price": 12000, "icon": "flashlight", "stock": 23, "hot": false, "featured": true },
+    { "id": "r4", "name": "팬카드 네온 테마", "category": "디지털 아이템", "price": 3000, "icon": "palette", "stock": null, "hot": false, "featured": false },
+    { "id": "r5", "name": "치킨 세트 30% 쿠폰", "category": "제휴 쿠폰", "price": 5500, "icon": "restaurant", "stock": null, "hot": true, "featured": false },
+    { "id": "r6", "name": "시즌권 응모권", "category": "한정", "price": 20000, "icon": "ticket", "stock": 5, "hot": false, "featured": true, "closing": true },
+    { "id": "r7", "name": "메가커피 아메리카노", "category": "기프티콘", "price": 2800, "icon": "coffee", "stock": null, "hot": false, "featured": false },
+    { "id": "r8", "name": "경기장 특석 추첨권", "category": "한정", "price": 15000, "icon": "stadium", "stock": 12, "hot": false, "featured": false, "closing": true },
+    { "id": "r9", "name": "팀 로고 키캡 세트", "category": "야구용품", "price": 9000, "icon": "keyboard", "stock": 40, "hot": false, "featured": false },
+    { "id": "r10", "name": "더그아웃 프리미엄 배지", "category": "디지털 아이템", "price": 6000, "icon": "medal", "stock": null, "hot": true, "featured": false },
+    { "id": "r11", "name": "버거킹 세트 20% 할인", "category": "제휴 쿠폰", "price": 4000, "icon": "burger", "stock": null, "hot": false, "featured": false },
+    { "id": "r12", "name": "사인볼 직접배송 추첨", "category": "한정", "price": 25000, "icon": "baseball", "stock": 3, "hot": false, "featured": false, "closing": true }
+  ]
+}

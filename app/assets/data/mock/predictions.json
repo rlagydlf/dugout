@@ -1,0 +1,10 @@
+{
+  "predictions": [
+    { "id": "p1", "category": "winner", "title": "오늘의 승리팀 예측", "homeTeamId": "lg", "awayTeamId": "doosan", "odds": 2.0, "deadline": "18:00", "minutesLeft": 47, "freeEntry": false, "participants": 3842 },
+    { "id": "p2", "category": "keyPlayer", "title": "오늘 활약할 키플레이어", "homeTeamId": "ssg", "awayTeamId": "kia", "odds": 4.5, "deadline": "18:30", "minutesLeft": 77, "freeEntry": true, "participants": 1290 },
+    { "id": "p3", "category": "longHit", "title": "오늘 홈런/장타 선수 예측", "homeTeamId": "hanwha", "awayTeamId": "samsung", "odds": 7.0, "deadline": "경기 시작까지", "minutesLeft": 120, "freeEntry": false, "participants": 672 },
+    { "id": "p4", "category": "rivalry", "title": "라이벌전 최다 득점 이닝", "homeTeamId": "lg", "awayTeamId": "doosan", "odds": 3.5, "deadline": "19:00", "minutesLeft": 107, "freeEntry": false, "participants": 2140 },
+    { "id": "p5", "category": "winner", "title": "키움 vs NC 승리팀", "homeTeamId": "kiwoom", "awayTeamId": "nc", "odds": 2.0, "deadline": "17:30", "minutesLeft": 17, "freeEntry": true, "participants": 905 },
+    { "id": "p6", "category": "rivalry", "title": "잠실 더비 선취점 팀", "homeTeamId": "lg", "awayTeamId": "doosan", "odds": 1.8, "deadline": "18:00", "minutesLeft": 47, "freeEntry": false, "participants": 4510 }
+  ]
+}

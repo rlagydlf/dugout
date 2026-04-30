@@ -1,0 +1,56 @@
+name: dugout
+description: "더그아웃 - 참여형 야구 팬 액션 플랫폼"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State / Navigation
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+
+  # HTTP / Models
+  dio: ^5.7.0
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # UI / Effects
+  flutter_animate: ^4.5.2
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  flutter_svg: ^2.0.16
+
+  # Storage
+  shared_preferences: ^2.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/data/
+    - assets/data/mock/
+    - assets/images/
+    - assets/images/teams/
+    - assets/images/mascots/
+    - assets/images/patterns/
+    - assets/images/moods/
+    - assets/images/icons/
+    - assets/images/backgrounds/
+    - assets/images/effects/
+    - assets/images/prediction/
+    - assets/images/reward/
+    - assets/icons/

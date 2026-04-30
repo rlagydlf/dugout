@@ -1,0 +1,14 @@
+{
+  "quests": [
+    { "id": "q1", "type": "daily", "title": "오늘의 출석 체크", "description": "앱을 실행해 오늘 출석을 완료하세요", "reward": 10, "progress": 1, "total": 1, "completed": true },
+    { "id": "q2", "type": "gameDay", "title": "경기 시작 30분 전 입장", "description": "경기 시작 30분 전에 앱에서 출정을 눌러주세요", "reward": 30, "progress": 0, "total": 1, "completed": false },
+    { "id": "q3", "type": "rivalry", "title": "라이벌전 예측 1회 참여", "description": "라이벌 팀과의 경기에서 예측을 1회 제출하세요", "reward": 50, "progress": 0, "total": 1, "completed": false },
+    { "id": "q4", "type": "daily", "title": "예측 3회 참여", "description": "오늘 예측 참여를 3번 완료하세요", "reward": 40, "progress": 1, "total": 3, "completed": false },
+    { "id": "q5", "type": "series", "title": "3연전 출정 완료", "description": "같은 팀과의 3연전 기간 동안 매일 출정하세요", "reward": 150, "progress": 1, "total": 3, "completed": false },
+    { "id": "q6", "type": "stadium", "title": "구장 방문 인증", "description": "직관 시 구장에서 GPS 인증을 완료하세요", "reward": 200, "progress": 0, "total": 1, "completed": false },
+    { "id": "q7", "type": "daily", "title": "퀴즈 1문제 풀기", "description": "야구 퀴즈 1문제를 정답 처리하세요", "reward": 20, "progress": 0, "total": 1, "completed": false },
+    { "id": "q8", "type": "gameDay", "title": "경기 결과 예측 적중", "description": "오늘 경기 결과를 정확히 예측하세요", "reward": 100, "progress": 0, "total": 1, "completed": false },
+    { "id": "q9", "type": "rivalry", "title": "라이벌전 응원 댓글 3개", "description": "라이벌전 경기 중 응원 댓글을 3개 남기세요", "reward": 60, "progress": 1, "total": 3, "completed": false },
+    { "id": "q10", "type": "series", "title": "시리즈 MVP 예측", "description": "3연전 MVP를 미리 예측하고 적중시키세요", "reward": 300, "progress": 0, "total": 1, "completed": false }
+  ]
+}
