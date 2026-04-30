@@ -1,44 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// 더그아웃 타이포그래피 시스템 v2.
-/// - 한글: Noto Sans KR (Pretendard 호환 모던 산세리프)
-/// - 영문 임팩트: Anton (Bebas Neue 호환, 야구 스코어보드용)
-/// - 스코어보드 디지털: VT323 (CRT LED), Black Ops One (배지)
-/// - 모노스페이스 카운트: JetBrains Mono / Major Mono Display
+/// 더그아웃 v2 타이포그래피 시스템.
 ///
-/// 모든 영문 폰트 헬퍼에 한글 fallback (Noto Sans KR) 명시 →
-/// 한글 텍스트가 영문 폰트로 호출되어도 깨지지 않음.
+/// 한글 = **Pretendard** (assets/fonts/Pretendard-{Regular..Black}.otf)
+/// 영문 액센트만:
+///   - Anton (impact display, 영문/숫자만)
+///   - Black Ops One (badge, 영문/숫자만)
+///
+/// 다른 영문 폰트(VT323/JetBrains/Major Mono)는 한글 깨짐 방지를 위해 제거됨.
+/// 한글이 들어갈 수 있는 모든 텍스트는 무조건 Pretendard 헬퍼 사용.
 class DType {
   DType._();
 
-  // 한글 fallback 체인
-  static const _krFallback = ['NotoSansKR', 'Apple SD Gothic Neo', 'Noto Sans CJK KR'];
+  static const String family = 'Pretendard';
 
-  /// 한글 본문 — 기본 산세리프
+  /// 본문 — Pretendard
   static TextStyle body([double size = 16, FontWeight weight = FontWeight.w400]) =>
-      GoogleFonts.notoSansKr(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          height: 1.5,
-          letterSpacing: -0.2,
-        ),
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: weight,
+        height: 1.5,
+        letterSpacing: -0.2,
       );
 
-  /// 한글 헤딩 (heavy)
-  static TextStyle heading(double size, {Color? color, FontWeight weight = FontWeight.w900}) =>
-      GoogleFonts.notoSansKr(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          height: 1.2,
-          letterSpacing: -0.5,
-          color: color,
-        ),
+  /// 헤딩 — Pretendard heavy
+  static TextStyle heading(
+    double size, {
+    Color? color,
+    FontWeight weight = FontWeight.w900,
+    double height = 1.2,
+  }) =>
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: weight,
+        height: height,
+        letterSpacing: -0.5,
+        color: color,
       );
 
-  /// 영문 임팩트 — 스타디움 LED, 큰 매치업 텍스트
+  /// 라벨 (작은 캡션, all-caps) — Pretendard
+  static TextStyle label(
+    double size, {
+    Color? color,
+    FontWeight weight = FontWeight.w700,
+    double letterSpacing = 1.0,
+  }) =>
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: weight,
+        letterSpacing: letterSpacing,
+        color: color,
+        height: 1.2,
+      );
+
+  /// 캡션 (보조 텍스트) — Pretendard
+  static TextStyle caption(double size, {Color? color, FontWeight weight = FontWeight.w400}) =>
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: weight,
+        height: 1.4,
+        color: color,
+      );
+
+  /// 모노 카운터 (포인트, 카드번호 등) — Pretendard tabular numerals
+  static TextStyle mono(double size, {Color? color, FontWeight weight = FontWeight.w700}) =>
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: 0.5,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  /// 영문 임팩트 — Anton (영문/숫자 ONLY, 한글 들어가면 안 됨)
   static TextStyle impact(double size, {Color? color, double letterSpacing = 1.5}) =>
       GoogleFonts.anton(
         textStyle: TextStyle(
@@ -47,47 +87,11 @@ class DType {
           height: 1.0,
           letterSpacing: letterSpacing,
           color: color ?? Colors.white,
-          fontFamilyFallback: _krFallback,
+          fontFamilyFallback: const [family],
         ),
       );
 
-  /// 영문 라벨 (작은 캡션, all caps)
-  static TextStyle label(double size, {Color? color, FontWeight weight = FontWeight.w700}) =>
-      GoogleFonts.notoSansKr(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          letterSpacing: 1.2,
-          color: color,
-          height: 1.2,
-        ),
-      );
-
-  /// 디지털 스코어보드 (점수 표시) — VT323 (LED 픽셀 느낌)
-  static TextStyle scoreboardDigital(double size, {Color? color}) =>
-      GoogleFonts.vt323(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: FontWeight.w400,
-          letterSpacing: 1,
-          color: color,
-          fontFamilyFallback: _krFallback,
-        ),
-      );
-
-  /// 모노 카운터 (포인트, 시간 등) — JetBrains Mono
-  static TextStyle mono(double size, {Color? color, FontWeight weight = FontWeight.w700}) =>
-      GoogleFonts.jetBrainsMono(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          color: color,
-          letterSpacing: 0,
-          fontFamilyFallback: _krFallback,
-        ),
-      );
-
-  /// 배지 / 강조 — Black Ops One
+  /// 영문 배지 — Black Ops One (영문/숫자 ONLY)
   static TextStyle badge(double size, {Color? color}) =>
       GoogleFonts.blackOpsOne(
         textStyle: TextStyle(
@@ -95,24 +99,28 @@ class DType {
           fontWeight: FontWeight.w400,
           letterSpacing: 1.2,
           color: color,
-          fontFamilyFallback: _krFallback,
+          fontFamilyFallback: const [family],
         ),
       );
 
-  /// 픽셀 모노 (작은 라벨) — Major Mono Display
+  /// 스코어보드 디지털 (LED 점수 표시) — Pretendard Black + tabular nums
+  static TextStyle scoreboardDigital(double size, {Color? color}) =>
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        fontWeight: FontWeight.w900,
+        color: color,
+        letterSpacing: 1,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  /// 마이크로 (주의사항/저작권) — Pretendard light
   static TextStyle micro(double size, {Color? color}) =>
-      GoogleFonts.majorMonoDisplay(
-        textStyle: TextStyle(
-          fontSize: size,
-          color: color,
-          letterSpacing: 0.5,
-          fontFamilyFallback: _krFallback,
-        ),
+      TextStyle(
+        fontFamily: family,
+        fontSize: size,
+        color: color,
+        height: 1.4,
+        letterSpacing: 0.3,
       );
-}
-
-/// 헬퍼 — 화면별로 호출되는 사이즈 값을 키워주는 multiplier.
-/// 기존 호출 (DType.body(13)) 그대로 두고 컴포넌트가 큰 사이즈 원할 때만.
-extension DTypeScaleExt on TextStyle {
-  TextStyle scale(double mul) => copyWith(fontSize: (fontSize ?? 14) * mul);
 }

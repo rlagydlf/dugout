@@ -8,6 +8,7 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -45,33 +46,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: DTokens.bgDark,
       body: Stack(
         children: [
-          // ── 우상단 야구 아이콘 배경
+          // ── 팀 컬러 상단 radial glow
           Positioned(
-            top: -40,
-            right: -60,
-            child: Opacity(
-              opacity: 0.05,
-              child: Image.asset(
-                'assets/images/icons/helmet.png',
-                width: 260,
-                errorBuilder: (e, s, t) => const SizedBox.shrink(),
-              ),
-            ),
-          ),
-
-          // ── 팀 컬러 상단 글로우
-          Positioned(
-            top: -100,
+            top: -80,
             left: -50,
             right: -50,
             child: Container(
-              height: 300,
+              height: 320,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
-                  radius: 0.85,
+                  radius: 0.9,
                   colors: [
-                    team.primary.withValues(alpha: 0.2),
+                    team.primary.withValues(alpha: 0.22),
                     Colors.transparent,
                   ],
                 ),
@@ -79,9 +66,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // ── 스캔라인
+          // ── diamond grid
           Positioned.fill(
-            child: CustomPaint(painter: _LoginScanlinePainter()),
+            child: CustomPaint(
+              painter: DDiamondGridPainter(
+                team.primary.withValues(alpha: 0.03),
+                step: 44,
+              ),
+            ),
+          ),
+
+          // ── scanline
+          Positioned.fill(
+            child: CustomPaint(painter: DScanlinePainter()),
           ),
 
           SafeArea(
@@ -89,18 +86,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: DTokens.s24),
               children: [
                 const SizedBox(height: DTokens.s16),
-
-                // ── 뒤로 + 헤더
                 _Header(team: team),
-
-                const SizedBox(height: DTokens.s48),
-
-                // ── 스코어보드 스타일 환영 텍스트
-                _WelcomeBlock(team: team),
-
                 const SizedBox(height: DTokens.s40),
-
-                // ── 로그인 폼
+                _WelcomeBlock(team: team),
+                const SizedBox(height: DTokens.s32),
                 _LoginForm(
                   email: _email,
                   password: _password,
@@ -111,27 +100,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onSubmit: _submit,
                   team: team,
                 ),
-
-                const SizedBox(height: DTokens.s24),
-
-                // ── 비밀번호 찾기
+                const SizedBox(height: DTokens.s20),
                 Center(
                   child: TextButton(
                     onPressed: () {},
                     child: Text(
                       '비밀번호를 잊으셨나요?',
-                      style: DType.body(15).copyWith(
+                      style: DType.body(14).copyWith(
                         color: team.primary.withValues(alpha: 0.85),
                       ),
                     ),
                   ),
                 ).animate().fadeIn(delay: 700.ms),
-
                 const SizedBox(height: DTokens.s16),
-
-                // ── demo notice
                 _DemoNotice(team: team),
-
                 const SizedBox(height: DTokens.s48),
               ],
             ),
@@ -170,9 +152,12 @@ class _Header extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('WELCOME BACK',
-                style: DType.label(12,
-                    color: (team.primary as Color).withValues(alpha: 0.8))),
+            Text(
+              'WELCOME BACK',
+              style: DType.label(11,
+                  color: (team.primary as Color).withValues(alpha: 0.8),
+                  letterSpacing: 2.5),
+            ),
             Text('로그인', style: DType.heading(22, color: Colors.white)),
           ],
         ),
@@ -192,43 +177,34 @@ class _WelcomeBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // VT323 LED 스타일 텍스트
         ShaderMask(
           shaderCallback: (rect) => LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.white, (team.primary as Color)],
+            colors: [Colors.white, team.primary as Color],
           ).createShader(rect),
           child: Text(
             '돌아오신 걸\n환영합니다',
             style: DType.heading(34, color: Colors.white),
           ),
         ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-
         const SizedBox(height: DTokens.s12),
-
-        // 이미 가입한 팬을 위한 서브카피
         Row(
           children: [
-            Image.asset(
-              'assets/images/icons/megaphone.png',
-              width: 16,
-              height: 16,
-              errorBuilder: (e, s, t) => Icon(
-                Icons.campaign_rounded,
-                size: 16,
-                color: (team.primary as Color).withValues(alpha: 0.7),
-              ),
+            Icon(
+              Icons.campaign_rounded,
+              size: 16,
+              color: (team.primary as Color).withValues(alpha: 0.7),
             ),
             const SizedBox(width: DTokens.s8),
             Text(
               '팬들이 기다리고 있습니다',
-              style: DType.body(16).copyWith(
+              style: DType.body(15).copyWith(
                 color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ],
-        ).animate().fadeIn(delay: 400.ms),
+        ).animate().fadeIn(delay: 380.ms),
       ],
     );
   }
@@ -264,30 +240,28 @@ class _LoginForm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 이메일
           Text('EMAIL',
-              style: DType.label(12,
-                  color: (team.primary as Color).withValues(alpha: 0.8))),
+              style: DType.label(11,
+                  color: (team.primary as Color).withValues(alpha: 0.8),
+                  letterSpacing: 2)),
           const SizedBox(height: DTokens.s8),
           _LoginField(
             controller: email,
             keyboardType: TextInputType.emailAddress,
-            prefixAsset: 'assets/images/icons/baseball.png',
-            prefixFallback: Icons.email_outlined,
+            prefixIcon: Icons.email_outlined,
           ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.06),
 
           const SizedBox(height: DTokens.s20),
 
-          // 비밀번호
           Text('PASSWORD',
-              style: DType.label(12,
-                  color: (team.primary as Color).withValues(alpha: 0.8))),
+              style: DType.label(11,
+                  color: (team.primary as Color).withValues(alpha: 0.8),
+                  letterSpacing: 2)),
           const SizedBox(height: DTokens.s8),
           _LoginField(
             controller: password,
             obscureText: !passwordVisible,
-            prefixAsset: 'assets/images/icons/mitt.png',
-            prefixFallback: Icons.lock_outline,
+            prefixIcon: Icons.lock_outline,
             suffixIcon: GestureDetector(
               onTap: onTogglePassword,
               child: Icon(
@@ -298,20 +272,19 @@ class _LoginForm extends StatelessWidget {
                 color: DTokens.textTertiaryDark,
               ),
             ),
-          ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.06),
+          ).animate().fadeIn(delay: 580.ms).slideY(begin: 0.06),
 
           const SizedBox(height: DTokens.s24),
 
-          // 로그인 버튼
           DButton(
             label: '로그인',
             loading: loading,
             onPressed: onSubmit,
             icon: Icons.sports_baseball_rounded,
-          ).animate().fadeIn(delay: 700.ms),
+          ).animate().fadeIn(delay: 680.ms),
         ],
       ),
-    ).animate().fadeIn(delay: 450.ms).slideY(begin: 0.12);
+    ).animate().fadeIn(delay: 440.ms).slideY(begin: 0.1);
   }
 }
 
@@ -321,16 +294,14 @@ class _LoginField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final bool obscureText;
-  final String prefixAsset;
-  final IconData prefixFallback;
+  final IconData prefixIcon;
   final Widget? suffixIcon;
 
   const _LoginField({
     required this.controller,
     this.keyboardType,
     this.obscureText = false,
-    required this.prefixAsset,
-    required this.prefixFallback,
+    required this.prefixIcon,
     this.suffixIcon,
   });
 
@@ -343,23 +314,13 @@ class _LoginField extends StatelessWidget {
       obscureText: obscureText,
       style: DType.mono(14, color: Colors.white),
       decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Image.asset(
-            prefixAsset,
-            width: 18,
-            height: 18,
-            errorBuilder: (e, s, t) =>
-                Icon(prefixFallback, size: 18, color: team.primary),
-          ),
-        ),
+        prefixIcon: Icon(prefixIcon, size: 18, color: team.primary),
         suffixIcon: suffixIcon != null
             ? Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: suffixIcon,
               )
             : null,
-        prefixIconColor: team.primary,
         filled: true,
         fillColor: DTokens.surfaceDark,
         border: OutlineInputBorder(
@@ -405,29 +366,12 @@ class _DemoNotice extends StatelessWidget {
           Expanded(
             child: Text(
               '데모 모드: fan@dugout.app / demo1234 로 바로 진입합니다.',
-              style: DType.label(12,
-                  color: Colors.white.withValues(alpha: 0.7)),
+              style: DType.caption(12,
+                  color: Colors.white.withValues(alpha: 0.65)),
             ),
           ),
         ],
       ),
     ).animate().fadeIn(delay: 800.ms);
   }
-}
-
-// ── Painter ───────────────────────────────────────────────────────────────────
-
-class _LoginScanlinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.012)
-      ..strokeWidth = 1;
-    for (double y = 0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

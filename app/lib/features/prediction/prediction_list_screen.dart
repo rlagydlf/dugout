@@ -8,6 +8,7 @@ import '../../app/theme/team_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_point_badge.dart';
 
@@ -51,8 +52,6 @@ const _mockPredictions = [
 ];
 
 final _predFilterProvider = StateProvider<PredCategory?>((ref) => null);
-
-// ── 카테고리 메타 ──────────────────────────────────────────────────────────
 
 const _catLabels = {
   PredCategory.winner: '승리팀',
@@ -119,9 +118,9 @@ class PredictionListScreen extends ConsumerWidget {
                   final p = filtered[i];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: DTokens.s12),
-                    child: _PredictionCard(
-                      prediction: p,
+                    child: D3DTiltCard(
                       onTap: () => context.push('/predictions/${p.id}'),
+                      child: _PredictionCard(prediction: p),
                     )
                         .animate(delay: Duration(milliseconds: 60 * i))
                         .fadeIn(duration: 280.ms)
@@ -145,7 +144,7 @@ class PredictionListScreen extends ConsumerWidget {
   }
 }
 
-// ── 상태 요약 ─────────────────────────────────────────────────────────────
+// ── 상태 요약 (DShimmerSweep) ─────────────────────────────────────────────
 
 class _StatusSummary extends StatelessWidget {
   final int activeCount;
@@ -198,27 +197,35 @@ class _SummaryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DGlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: DTokens.s16, vertical: DTokens.s12),
-      child: Row(
-        children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: Center(
-              child: Image.asset(iconAsset, width: 18, height: 18, color: color,
-                  errorBuilder: (e, s, t) => Icon(Icons.sports_baseball_rounded, size: 18, color: color)),
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 3500),
+      highlightOpacity: 0.10,
+      child: DGlassPanel(
+        padding: const EdgeInsets.symmetric(horizontal: DTokens.s16, vertical: DTokens.s14),
+        child: Row(
+          children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Center(
+                child: Image.asset(iconAsset, width: 18, height: 18, color: color,
+                    errorBuilder: (e, s, t) => Icon(Icons.sports_baseball_rounded, size: 18, color: color)),
+              ),
             ),
-          ),
-          const SizedBox(width: DTokens.s12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: DType.body(15).copyWith(color: DTokens.textSecondaryDark)),
-              Text(value, style: DType.scoreboardDigital(20, color: color)),
-            ],
-          ),
-        ],
+            const SizedBox(width: DTokens.s12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: DType.caption(12, color: DTokens.textSecondaryDark)),
+                Text(value, style: DType.scoreboardDigital(22, color: color)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -246,7 +253,7 @@ class _CategoryFilter extends StatelessWidget {
     final types = [null, ...PredCategory.values];
 
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
@@ -263,10 +270,26 @@ class _CategoryFilter extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected ? team.primary : DTokens.surfaceDark2,
                 borderRadius: BorderRadius.circular(DTokens.rPill),
-                border: Border.all(color: isSelected ? team.primary : DTokens.borderDark),
-                boxShadow: isSelected ? [BoxShadow(color: team.primary.withValues(alpha: 0.4), blurRadius: 8)] : null,
+                border: Border.all(
+                  color: isSelected ? team.primary : DTokens.borderDark,
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 10)]
+                    : null,
               ),
-              child: Text(_labels[type]!, style: DType.label(12, color: isSelected ? Colors.white : DTokens.textSecondaryDark)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (type != null) ...[
+                    Image.asset(_catIconAssets[type]!, width: 12, height: 12,
+                        color: isSelected ? Colors.white : DTokens.textTertiaryDark,
+                        errorBuilder: (e, s, t) => const SizedBox.shrink()),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(_labels[type]!, style: DType.label(12, color: isSelected ? Colors.white : DTokens.textSecondaryDark)),
+                ],
+              ),
             ),
           );
         },
@@ -275,33 +298,38 @@ class _CategoryFilter extends StatelessWidget {
   }
 }
 
-// ── 예측 카드 ─────────────────────────────────────────────────────────────
+// ── 예측 카드 (D3DTiltCard 래퍼 없이 — 상위에서 감쌈) ────────────────────
 
 class _PredictionCard extends StatelessWidget {
   final _Prediction prediction;
-  final VoidCallback onTap;
 
-  const _PredictionCard({required this.prediction, required this.onTap});
+  const _PredictionCard({required this.prediction});
 
   @override
   Widget build(BuildContext context) {
-    final team    = context.team;
+    final team     = context.team;
     final isUrgent = prediction.minutesLeft <= 30;
-    final home    = TeamThemes.byId(prediction.homeTeamId);
-    final away    = TeamThemes.byId(prediction.awayTeamId);
+    final home     = TeamThemes.byId(prediction.homeTeamId);
+    final away     = TeamThemes.byId(prediction.awayTeamId);
 
-    return DGlassPanel(
-      teamBorder: true,
-      onTap: onTap,
-      padding: EdgeInsets.zero,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r20),
+        border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.10), blurRadius: 16, offset: const Offset(0, 4))],
+      ),
       child: Column(
         children: [
-          // 헤더 — 팀컬러 스트라이프
-          Container(
-            height: 4,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(DTokens.r20)),
-              gradient: LinearGradient(colors: [home.primary, away.primary]),
+          // 팀컬러 이중 스트라이프 헤더
+          SizedBox(
+            height: 5,
+            child: Row(
+              children: [
+                Expanded(child: Container(color: home.primary)),
+                Expanded(child: Container(color: away.primary)),
+              ],
             ),
           ),
           Padding(
@@ -320,6 +348,7 @@ class _PredictionCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: DTokens.success.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(DTokens.rPill),
+                          border: Border.all(color: DTokens.success.withValues(alpha: 0.3)),
                         ),
                         child: Text('무료', style: DType.label(11, color: DTokens.success)),
                       ),
@@ -327,9 +356,9 @@ class _PredictionCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: team.primary,
+                        gradient: LinearGradient(colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.5)!]),
                         borderRadius: BorderRadius.circular(DTokens.rPill),
-                        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 8)],
                       ),
                       child: Text('×${prediction.odds.toStringAsFixed(1)}',
                           style: DType.scoreboardDigital(15, color: Colors.white)),
@@ -339,12 +368,12 @@ class _PredictionCard extends StatelessWidget {
                 const SizedBox(height: DTokens.s12),
                 Text(prediction.title, style: DType.body(14, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark)),
                 const SizedBox(height: DTokens.s12),
-                // 팀 매치업 — 실제 KBO 로고
+                // 팀 매치업 미니
                 Row(
                   children: [
                     Expanded(child: _MiniTeamSide(team: home, isHome: true)),
                     Container(
-                      width: 36, height: 36,
+                      width: 40, height: 40,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [home.primary.withValues(alpha: 0.3), away.primary.withValues(alpha: 0.3)],
@@ -361,10 +390,11 @@ class _PredictionCard extends StatelessWidget {
                 // 푸터
                 Row(
                   children: [
-                    Image.asset('assets/images/icons/scoreboard.png', width: 13, height: 13,
-                        color: isUrgent ? DTokens.danger : DTokens.textTertiaryDark,
-                        errorBuilder: (e, s, t) => Icon(Icons.timer_outlined, size: 13,
-                            color: isUrgent ? DTokens.danger : DTokens.textTertiaryDark)),
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 13,
+                      color: isUrgent ? DTokens.danger : DTokens.textTertiaryDark,
+                    ),
                     const SizedBox(width: 4),
                     Text(prediction.deadline,
                         style: DType.mono(11, color: isUrgent ? DTokens.danger : DTokens.textTertiaryDark,
@@ -376,15 +406,16 @@ class _PredictionCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: DTokens.danger.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(DTokens.rPill),
+                          border: Border.all(color: DTokens.danger.withValues(alpha: 0.35)),
                         ),
-                        child: Text('마감 임박', style: DType.label(11, color: DTokens.danger)),
+                        child: Text('마감 임박', style: DType.label(10, color: DTokens.danger)),
                       ).animate(onPlay: (c) => c.repeat(reverse: true)).fade(begin: 0.6, end: 1.0, duration: 700.ms),
                     ],
                     const Spacer(),
                     Icon(Icons.people_rounded, size: 13, color: DTokens.textTertiaryDark),
                     const SizedBox(width: 3),
                     Text('${_fmtCount(prediction.participants)}명',
-                        style: DType.label(12, color: DTokens.textTertiaryDark)),
+                        style: DType.label(11, color: DTokens.textTertiaryDark)),
                     const SizedBox(width: DTokens.s12),
                     Text('참여 →', style: DType.label(12, color: team.primary)),
                   ],
@@ -413,9 +444,9 @@ class _MiniTeamSide extends StatelessWidget {
     return Column(
       children: [
         Image.asset(
-          team.crestAsset, width: 40, height: 40, fit: BoxFit.contain,
+          team.crestAsset, width: 44, height: 44, fit: BoxFit.contain,
           errorBuilder: (e, s, t) => Container(
-            width: 40, height: 40,
+            width: 44, height: 44,
             decoration: BoxDecoration(shape: BoxShape.circle,
                 gradient: LinearGradient(colors: [team.primary, team.secondary])),
             alignment: Alignment.center,
@@ -483,7 +514,7 @@ class _MyHistoryCta extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('내 예측 내역', style: DType.body(15, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark)),
-                Text('참여한 예측 결과 및 정산 내역 확인', style: DType.body(14).copyWith(color: DTokens.textSecondaryDark)),
+                Text('참여한 예측 결과 및 정산 내역 확인', style: DType.caption(13, color: DTokens.textSecondaryDark)),
               ],
             ),
           ),

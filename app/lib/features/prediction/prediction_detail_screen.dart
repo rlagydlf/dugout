@@ -8,6 +8,7 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_matchup_card.dart';
 import '../../shared/widgets/d_scoreboard.dart';
@@ -51,6 +52,7 @@ class PredictionDetailScreen extends ConsumerStatefulWidget {
 
 class _PredictionDetailScreenState extends ConsumerState<PredictionDetailScreen> {
   bool _submitting = false;
+  bool _showParticles = false;
 
   _PredDetail get _detail => _findDetail(widget.predictionId);
 
@@ -61,6 +63,8 @@ class _PredictionDetailScreenState extends ConsumerState<PredictionDetailScreen>
     setState(() => _submitting = true);
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
+
+    setState(() { _submitting = false; _showParticles = true; });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -78,7 +82,6 @@ class _PredictionDetailScreenState extends ConsumerState<PredictionDetailScreen>
       ),
     );
 
-    setState(() => _submitting = false);
     Navigator.of(context).pop();
   }
 
@@ -100,97 +103,112 @@ class _PredictionDetailScreenState extends ConsumerState<PredictionDetailScreen>
           child: Container(height: 1, color: DTokens.borderDark),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, DTokens.s96),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // DMatchupCard 히어로 (대형)
-            DMatchupCard(
-              game: MatchupGameInfo(
-                home: home,
-                away: away,
-                status: GameStatus.preGame,
-                time: detail.time,
-                seriesLabel: detail.categoryName,
-                stadium: detail.stadium,
+      body: Stack(
+        children: [
+          if (_showParticles)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DExplosionParticles(
+                  color: context.team.primary,
+                  accentColor: context.team.accent,
+                  count: 20,
+                ),
               ),
-              height: 200,
-            ).animate().fadeIn(duration: 350.ms).slideY(begin: -0.06),
-
-            const SizedBox(height: DTokens.s20),
-
-            Text('예측 선택', style: DType.label(13, color: DTokens.textSecondaryDark)),
-            const SizedBox(height: DTokens.s8),
-            ...detail.options.asMap().entries.map((entry) {
-              final i   = entry.key;
-              final opt = entry.value;
-              final isSelected = state.selectedOption == i;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: DTokens.s8),
-                child: _OptionCard(
-                  option: opt,
-                  isSelected: isSelected,
-                  homeTeam: home,
-                  awayTeam: away,
-                  optionIndex: i,
-                  totalOptions: detail.options.length,
-                  onTap: () => ref.read(_predStateProvider.notifier).selectOption(i),
-                )
-                    .animate(delay: Duration(milliseconds: 80 + 60 * i))
-                    .fadeIn(duration: 260.ms)
-                    .slideX(begin: 0.04),
-              );
-            }),
-
-            const SizedBox(height: DTokens.s20),
-
-            Text('참여 방식', style: DType.label(13, color: DTokens.textSecondaryDark)),
-            const SizedBox(height: DTokens.s8),
-            _ParticipationToggle(
-              usePoints: state.usePoints,
-              onToggle: (v) => ref.read(_predStateProvider.notifier).togglePoints(v),
-            ).animate(delay: 300.ms).fadeIn(duration: 260.ms),
-
-            if (state.usePoints) ...[
-              const SizedBox(height: DTokens.s16),
-              _BetAmountPicker(
-                amount: state.betAmount,
-                userPoints: user.point,
-                onSelect: (v) => ref.read(_predStateProvider.notifier).setBet(v),
-              ).animate().fadeIn(duration: 200.ms),
-            ],
-
-            if (state.selectedOption >= 0) ...[
-              const SizedBox(height: DTokens.s16),
-              _ExpectedReward(
-                option: detail.options[state.selectedOption],
-                usePoints: state.usePoints,
-                betAmount: state.betAmount,
-              ).animate().fadeIn(duration: 200.ms),
-            ],
-
-            const SizedBox(height: DTokens.s20),
-
-            _DeadlineChip(detail: detail)
-                .animate(delay: 360.ms).fadeIn(duration: 260.ms),
-
-            const SizedBox(height: DTokens.s32),
-
-            DButton(
-              label: canSubmit ? '예측 제출하기' : '예측 선택 후 제출',
-              onPressed: canSubmit && !_submitting ? _submit : null,
-              loading: _submitting,
-              icon: Icons.send_rounded,
-            ).animate(delay: 400.ms).fadeIn(duration: 280.ms).slideY(begin: 0.1),
-
-            const SizedBox(height: DTokens.s16),
-            Text(
-              '※ 더그아웃 포인트는 현금 환급이 불가하며, 앱 내 리워드 교환 전용입니다. 예측 결과는 공식 기록을 기준으로 경기 종료 후 자동 정산됩니다.',
-              style: DType.label(12, color: DTokens.textTertiaryDark).copyWith(height: 1.6),
             ),
-          ],
-        ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, DTokens.s96),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // DMatchupCard 히어로
+                DMatchupCard(
+                  game: MatchupGameInfo(
+                    home: home,
+                    away: away,
+                    status: GameStatus.preGame,
+                    time: detail.time,
+                    seriesLabel: detail.categoryName,
+                    stadium: detail.stadium,
+                  ),
+                  height: 210,
+                ).animate().fadeIn(duration: 350.ms).slideY(begin: -0.06),
+
+                const SizedBox(height: DTokens.s24),
+
+                Text('예측 선택', style: DType.label(13, color: DTokens.textSecondaryDark, letterSpacing: 1.5)),
+                const SizedBox(height: DTokens.s8),
+                ...detail.options.asMap().entries.map((entry) {
+                  final i   = entry.key;
+                  final opt = entry.value;
+                  final isSelected = state.selectedOption == i;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: DTokens.s8),
+                    child: D3DTiltCard(
+                      onTap: () => ref.read(_predStateProvider.notifier).selectOption(i),
+                      child: _OptionCard(
+                        option: opt,
+                        isSelected: isSelected,
+                        homeTeam: home,
+                        awayTeam: away,
+                        optionIndex: i,
+                      ),
+                    )
+                        .animate(delay: Duration(milliseconds: 80 + 60 * i))
+                        .fadeIn(duration: 260.ms)
+                        .slideX(begin: 0.04),
+                  );
+                }),
+
+                const SizedBox(height: DTokens.s20),
+
+                Text('참여 방식', style: DType.label(13, color: DTokens.textSecondaryDark, letterSpacing: 1.5)),
+                const SizedBox(height: DTokens.s8),
+                _ParticipationToggle(
+                  usePoints: state.usePoints,
+                  onToggle: (v) => ref.read(_predStateProvider.notifier).togglePoints(v),
+                ).animate(delay: 300.ms).fadeIn(duration: 260.ms),
+
+                if (state.usePoints) ...[
+                  const SizedBox(height: DTokens.s16),
+                  _BetAmountPicker(
+                    amount: state.betAmount,
+                    userPoints: user.point,
+                    onSelect: (v) => ref.read(_predStateProvider.notifier).setBet(v),
+                  ).animate().fadeIn(duration: 200.ms),
+                ],
+
+                if (state.selectedOption >= 0) ...[
+                  const SizedBox(height: DTokens.s16),
+                  _ExpectedReward(
+                    option: detail.options[state.selectedOption],
+                    usePoints: state.usePoints,
+                    betAmount: state.betAmount,
+                  ).animate().fadeIn(duration: 200.ms),
+                ],
+
+                const SizedBox(height: DTokens.s20),
+
+                _DeadlineChip(detail: detail)
+                    .animate(delay: 360.ms).fadeIn(duration: 260.ms),
+
+                const SizedBox(height: DTokens.s32),
+
+                DButton(
+                  label: canSubmit ? '예측 제출하기' : '예측 선택 후 제출',
+                  onPressed: canSubmit && !_submitting ? _submit : null,
+                  loading: _submitting,
+                  icon: Icons.send_rounded,
+                ).animate(delay: 400.ms).fadeIn(duration: 280.ms).slideY(begin: 0.1),
+
+                const SizedBox(height: DTokens.s16),
+                Text(
+                  '※ 더그아웃 포인트는 현금 환급이 불가하며, 앱 내 리워드 교환 전용입니다.',
+                  style: DType.micro(12, color: DTokens.textTertiaryDark),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -204,8 +222,6 @@ class _OptionCard extends StatelessWidget {
   final TeamTheme homeTeam;
   final TeamTheme awayTeam;
   final int optionIndex;
-  final int totalOptions;
-  final VoidCallback onTap;
 
   const _OptionCard({
     required this.option,
@@ -213,46 +229,48 @@ class _OptionCard extends StatelessWidget {
     required this.homeTeam,
     required this.awayTeam,
     required this.optionIndex,
-    required this.totalOptions,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final team    = context.team;
-    // 홈/어웨이 옵션에 팀 컬러 힌트
+    final team = context.team;
     final accentColor = optionIndex == 0 ? homeTeam.primary
         : optionIndex == 1 ? awayTeam.primary
         : team.accent.withValues(alpha: 0.8);
 
-    return DGlassPanel(
-      teamBorder: isSelected,
-      onTap: onTap,
+    return AnimatedContainer(
+      duration: 180.ms,
       padding: const EdgeInsets.all(DTokens.s16),
+      decoration: BoxDecoration(
+        color: isSelected ? accentColor.withValues(alpha: 0.12) : DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r16),
+        border: Border.all(
+          color: isSelected ? accentColor : DTokens.borderDark,
+          width: isSelected ? 1.5 : 1.0,
+        ),
+        boxShadow: isSelected
+            ? [BoxShadow(color: accentColor.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 4))]
+            : null,
+      ),
       child: Row(
         children: [
-          // 선택 원 + 팀 컬러 힌트
           AnimatedContainer(
             duration: 180.ms,
-            width: 24, height: 24,
+            width: 26, height: 26,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? team.primary : Colors.transparent,
-              border: Border.all(
-                color: isSelected ? team.primary : accentColor.withValues(alpha: 0.5),
-                width: 2,
-              ),
-              boxShadow: isSelected ? [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 8)] : null,
+              color: isSelected ? accentColor : Colors.transparent,
+              border: Border.all(color: isSelected ? accentColor : accentColor.withValues(alpha: 0.5), width: 2),
+              boxShadow: isSelected ? [BoxShadow(color: accentColor.withValues(alpha: 0.5), blurRadius: 8)] : null,
             ),
             child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
           ),
           const SizedBox(width: DTokens.s12),
-          // 팀 로고 (첫 두 옵션)
           if (optionIndex < 2) ...[
             Image.asset(
               optionIndex == 0 ? homeTeam.crestAsset : awayTeam.crestAsset,
-              width: 28, height: 28, fit: BoxFit.contain,
-              errorBuilder: (e, s, t) => const SizedBox(width: 28),
+              width: 30, height: 30, fit: BoxFit.contain,
+              errorBuilder: (e, s, t) => const SizedBox(width: 30),
             ),
             const SizedBox(width: DTokens.s8),
           ],
@@ -262,21 +280,22 @@ class _OptionCard extends StatelessWidget {
               children: [
                 Text(option.label,
                     style: DType.body(15, FontWeight.w700).copyWith(
-                      color: isSelected ? team.primary : DTokens.textPrimaryDark,
+                      color: isSelected ? accentColor : DTokens.textPrimaryDark,
                     )),
                 if (option.subLabel != null) ...[
                   const SizedBox(height: 2),
-                  Text(option.subLabel!, style: DType.body(12).copyWith(color: DTokens.textSecondaryDark)),
+                  Text(option.subLabel!, style: DType.caption(12, color: DTokens.textSecondaryDark)),
                 ],
               ],
             ),
           ),
-          Container(
+          AnimatedContainer(
+            duration: 180.ms,
             padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
             decoration: BoxDecoration(
-              color: isSelected ? team.primary : DTokens.surfaceDark2,
+              color: isSelected ? accentColor : DTokens.surfaceDark2,
               borderRadius: BorderRadius.circular(DTokens.rPill),
-              border: Border.all(color: isSelected ? team.primary : DTokens.borderDark),
+              border: Border.all(color: isSelected ? accentColor : DTokens.borderDark),
             ),
             child: Text('×${option.odds.toStringAsFixed(1)}',
                 style: DType.scoreboardDigital(16, color: isSelected ? Colors.white : DTokens.textSecondaryDark)),
@@ -364,7 +383,7 @@ class _ToggleOption extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: DType.label(12, color: isSelected ? color : DTokens.textPrimaryDark)),
-                  Text(description, style: DType.label(12, color: DTokens.textTertiaryDark)),
+                  Text(description, style: DType.micro(11, color: DTokens.textTertiaryDark)),
                 ],
               ),
             ),
@@ -418,7 +437,7 @@ class _BetAmountPicker extends StatelessWidget {
                         color: isSelected ? team.primary : insufficient ? DTokens.surfaceDark : DTokens.surfaceDark2,
                         borderRadius: BorderRadius.circular(DTokens.r12),
                         border: Border.all(color: isSelected ? team.primary : DTokens.borderDark),
-                        boxShadow: isSelected ? [BoxShadow(color: team.primary.withValues(alpha: 0.4), blurRadius: 8)] : null,
+                        boxShadow: isSelected ? [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 8)] : null,
                       ),
                       child: Center(
                         child: Text('${_fmt(v)}P',
@@ -448,7 +467,7 @@ class _BetAmountPicker extends StatelessWidget {
   }
 }
 
-// ── 예상 보상 ─────────────────────────────────────────────────────────────
+// ── 예상 보상 (DShimmerSweep) ─────────────────────────────────────────────
 
 class _ExpectedReward extends StatelessWidget {
   final _PredOption option;
@@ -462,29 +481,43 @@ class _ExpectedReward extends StatelessWidget {
     final team   = context.team;
     final reward = usePoints ? (betAmount * option.odds).toInt() : 50;
 
-    return DGlassPanel(
-      teamBorder: true,
-      padding: const EdgeInsets.all(DTokens.s16),
-      child: Row(
-        children: [
-          Image.asset('assets/images/icons/trophy.png', width: 24, height: 24, color: team.primary,
-              errorBuilder: (e, s, t) => Icon(Icons.emoji_events_rounded, color: team.primary, size: 24)),
-          const SizedBox(width: DTokens.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('예측 적중 시 예상 보상', style: DType.body(14).copyWith(color: DTokens.textSecondaryDark)),
-                const SizedBox(height: 2),
-                Text(
-                  usePoints ? '$betAmount P × ×${option.odds.toStringAsFixed(1)} = $reward P' : '무료 참여 보상 +50 P',
-                  style: DType.body(14, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark),
-                ),
-              ],
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 2400),
+      highlightOpacity: 0.18,
+      child: DGlassPanel(
+        teamBorder: true,
+        padding: const EdgeInsets.all(DTokens.s16),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: team.primary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+              ),
+              child: Center(
+                child: Image.asset('assets/images/icons/trophy.png', width: 22, height: 22, color: team.primary,
+                    errorBuilder: (e, s, t) => Icon(Icons.emoji_events_rounded, color: team.primary, size: 22)),
+              ),
             ),
-          ),
-          DScoreboard(value: '+$reward', label: 'P', accent: team.primary, valueSize: 24),
-        ],
+            const SizedBox(width: DTokens.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('예측 적중 시 예상 보상', style: DType.caption(13, color: DTokens.textSecondaryDark)),
+                  const SizedBox(height: 2),
+                  Text(
+                    usePoints ? '$betAmount P × ×${option.odds.toStringAsFixed(1)} = $reward P' : '무료 참여 보상 +50 P',
+                    style: DType.body(13, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark),
+                  ),
+                ],
+              ),
+            ),
+            DScoreboard(value: '+$reward', label: 'P', accent: team.primary, valueSize: 26),
+          ],
+        ),
       ),
     );
   }
@@ -504,8 +537,7 @@ class _DeadlineChip extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset('assets/images/icons/scoreboard.png', width: 16, height: 16, color: color,
-            errorBuilder: (e, s, t) => Icon(Icons.timer_outlined, size: 16, color: color)),
+        Icon(Icons.timer_outlined, size: 16, color: color),
         const SizedBox(width: DTokens.s4),
         Text(detail.deadline, style: DType.mono(13, color: color)),
         if (isUrgent) ...[

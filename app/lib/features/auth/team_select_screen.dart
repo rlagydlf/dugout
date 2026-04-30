@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,18 +11,39 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_team_crest.dart';
+
+// ── mock team stats ───────────────────────────────────────────────────────────
+
+const _kTeamStats = <String, (String, String, String)>{
+  'lg':      ('1위', '2회', '오스틴'),
+  'doosan':  ('4위', '6회', '양의지'),
+  'kiwoom':  ('7위', '1회', '이정후'),
+  'ssg':     ('2위', '4회', '최정'),
+  'kia':     ('3위', '11회', '나성범'),
+  'nc':      ('5위', '2회', '박민우'),
+  'kt':      ('6위', '2회', '강백호'),
+  'samsung': ('8위', '8회', '구자욱'),
+  'lotte':   ('9위', '2회', '안치홍'),
+  'hanwha':  ('10위', '1회', '노시환'),
+};
+
+// ── screen ────────────────────────────────────────────────────────────────────
 
 class TeamSelectScreen extends ConsumerStatefulWidget {
   const TeamSelectScreen({super.key});
+
   @override
   ConsumerState<TeamSelectScreen> createState() => _TeamSelectScreenState();
 }
 
 class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   String? _previewTeamId;
   late final AnimationController _glowCtrl;
+  late final AnimationController _particleCtrl;
+  bool _confirmed = false;
 
   @override
   void initState() {
@@ -29,16 +52,36 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
+    _particleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
   }
 
   @override
   void dispose() {
     _glowCtrl.dispose();
+    _particleCtrl.dispose();
     super.dispose();
   }
 
   TeamTheme get _selectedTheme =>
-      _previewTeamId != null ? TeamThemes.byId(_previewTeamId) : TeamTheme.defaultTheme;
+      _previewTeamId != null
+          ? TeamThemes.byId(_previewTeamId)
+          : TeamTheme.defaultTheme;
+
+  Future<void> _onConfirm() async {
+    if (_previewTeamId == null) return;
+    setState(() => _confirmed = true);
+    _particleCtrl.forward(from: 0);
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    final router = GoRouter.of(context);
+    await ref.read(currentTeamProvider.notifier).select(_previewTeamId!);
+    ref.read(userProvider.notifier).selectTeam(_previewTeamId!);
+    if (!mounted) return;
+    router.go('/home');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +93,7 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── 팀 컬러 radial glow (선택 시 즉시 변환)
+          // ── 팀 컬러 radial glow
           AnimatedContainer(
             duration: const Duration(milliseconds: 450),
             curve: Curves.easeOutCubic,
@@ -68,7 +111,7 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
             ),
           ),
 
-          // ── 마스코트 배경 (선택한 팀)
+          // ── 마스코트 배경 fade in
           if (_previewTeamId != null)
             Positioned(
               right: -60,
@@ -82,27 +125,53 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
                   errorBuilder: (e, s, t) => const SizedBox.shrink(),
                 ),
               ),
-            ).animate().fadeIn(duration: 400.ms),
+            ).animate().fadeIn(duration: 400.ms).slideX(
+                  begin: 0.08,
+                  curve: Curves.easeOutBack,
+                ),
 
-          // ── 스캔라인
+          // ── diamond grid
           Positioned.fill(
-            child: CustomPaint(painter: _TeamSelectScanlinePainter()),
+            child: CustomPaint(
+              painter: DDiamondGridPainter(
+                selected.primary.withValues(alpha: 0.025),
+              ),
+            ),
           ),
 
+          // ── scanline
+          Positioned.fill(
+            child: CustomPaint(
+              painter: DScanlinePainter(opacity: 0.013),
+            ),
+          ),
+
+          // ── particle effect (선택 완료 시)
+          if (_confirmed)
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _particleCtrl,
+                builder: (context, _) => CustomPaint(
+                  painter: _ConfirmParticlePainter(
+                    progress: _particleCtrl.value,
+                    color: selected.primary,
+                    accentColor: selected.accent,
+                  ),
+                ),
+              ),
+            ),
+
+          // ── main content
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── 헤더
-                _TeamSelectHeader(
-                  onBack: () => context.pop(),
-                ),
-
+                _TeamSelectHeader(onBack: () => context.pop()),
                 const SizedBox(height: DTokens.s16),
 
-                // ── 선택 프리뷰 / 타이틀
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: DTokens.s24),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: DTokens.s24),
                   child: _PreviewTitle(
                     selected: selected,
                     hasSelection: _previewTeamId != null,
@@ -133,6 +202,7 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
                       return _TeamCard(
                         team: t,
                         selected: isSelected,
+                        stats: _kTeamStats[t.teamId],
                         onTap: () =>
                             setState(() => _previewTeamId = t.teamId),
                       )
@@ -159,27 +229,23 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
                     DTokens.s24,
                     MediaQuery.of(context).padding.bottom + DTokens.s16,
                   ),
-                  child: DButton(
-                    label: _previewTeamId == null
-                        ? '팀을 선택해 주세요'
-                        : '${selected.teamShortName} 선택 완료',
-                    icon: _previewTeamId == null
-                        ? null
-                        : Icons.check_rounded,
-                    onPressed: _previewTeamId == null
-                        ? null
-                        : () async {
-                            final router = GoRouter.of(context);
-                            await ref
-                                .read(currentTeamProvider.notifier)
-                                .select(_previewTeamId!);
-                            ref
-                                .read(userProvider.notifier)
-                                .selectTeam(_previewTeamId!);
-                            if (!mounted) return;
-                            router.go('/home');
-                          },
-                  ),
+                  child: _previewTeamId == null
+                      ? DButton(
+                          label: '팀을 선택해 주세요',
+                          onPressed: null,
+                        )
+                      : D3DTiltCard(
+                          onTap: _onConfirm,
+                          child: DShimmerSweep(
+                            period: const Duration(milliseconds: 2800),
+                            highlightOpacity: 0.22,
+                            child: DButton(
+                              label: '${selected.teamShortName} 선택 완료',
+                              icon: Icons.check_rounded,
+                              onPressed: _onConfirm,
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -190,7 +256,7 @@ class _TeamSelectScreenState extends ConsumerState<TeamSelectScreen>
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── header ────────────────────────────────────────────────────────────────────
 
 class _TeamSelectHeader extends StatelessWidget {
   final VoidCallback onBack;
@@ -222,7 +288,8 @@ class _TeamSelectHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('CHOOSE YOUR TEAM',
-                  style: DType.label(12, color: Colors.white.withValues(alpha: 0.7))),
+                  style: DType.label(12,
+                      color: Colors.white.withValues(alpha: 0.7))),
               Text('응원팀 선택',
                   style: DType.heading(20, color: Colors.white)),
             ],
@@ -233,7 +300,7 @@ class _TeamSelectHeader extends StatelessWidget {
   }
 }
 
-// ── Preview title ─────────────────────────────────────────────────────────────
+// ── preview title ─────────────────────────────────────────────────────────────
 
 class _PreviewTitle extends StatelessWidget {
   final TeamTheme selected;
@@ -258,7 +325,7 @@ class _PreviewTitle extends StatelessWidget {
               team: selected,
               glowCtrl: glowCtrl,
             )
-          : _NoSelectionHint(key: const ValueKey('hint')),
+          : const _NoSelectionHint(key: ValueKey('hint')),
     );
   }
 }
@@ -278,9 +345,8 @@ class _NoSelectionHint extends StatelessWidget {
         const SizedBox(height: DTokens.s8),
         Text(
           '선택한 팀의 컬러로 앱 전체가 바뀝니다',
-          style: DType.body(16).copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
-          ),
+          style: DType.body(16)
+              .copyWith(color: Colors.white.withValues(alpha: 0.7)),
         ),
       ],
     );
@@ -301,25 +367,11 @@ class _SelectedPreview extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // 팀 로고 (실제 KBO PNG)
-        AnimatedBuilder(
-          animation: glowCtrl,
-          builder: (context, child) => Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: team.primary
-                      .withValues(alpha: 0.35 + glowCtrl.value * 0.35),
-                  blurRadius: 24 + glowCtrl.value * 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: child,
-          ),
+        // 팀 로고 with 다중 펄스 글로우
+        DMultiPulseGlow(
+          color: team.primary,
+          accentColor: team.accent,
+          size: 80,
           child: ClipOval(
             child: Image.asset(
               team.crestAsset,
@@ -332,24 +384,19 @@ class _SelectedPreview extends StatelessWidget {
           ),
         ),
         const SizedBox(width: DTokens.s16),
-
-        // 텍스트 영역
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 영문 ALL CAPS 팀 숏네임
               Text(
                 team.teamShortName.toUpperCase(),
                 style: DType.label(14, color: team.primary),
               ),
-              // 한글 팀명
               Text(
                 team.teamName,
                 style: DType.heading(22, color: Colors.white),
               ),
               const SizedBox(height: DTokens.s4),
-              // tagline
               Text(
                 '"${team.tagline}"',
                 style: DType.body(14).copyWith(
@@ -367,21 +414,24 @@ class _SelectedPreview extends StatelessWidget {
   }
 }
 
-// ── Team card ─────────────────────────────────────────────────────────────────
+// ── team card (3D tilt + mascot + logo + stats) ───────────────────────────────
 
 class _TeamCard extends StatelessWidget {
   final TeamTheme team;
   final bool selected;
+  final (String, String, String)? stats;
   final VoidCallback onTap;
+
   const _TeamCard({
     required this.team,
     required this.selected,
+    required this.stats,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return D3DTiltCard(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 280),
@@ -394,7 +444,8 @@ class _TeamCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Color.lerp(team.primary, Colors.black, selected ? 0.25 : 0.45)!,
-              Color.lerp(team.secondary, Colors.black, selected ? 0.1 : 0.35)!,
+              Color.lerp(
+                  team.secondary, Colors.black, selected ? 0.1 : 0.35)!,
             ],
           ),
           border: Border.all(
@@ -411,6 +462,12 @@ class _TeamCard extends StatelessWidget {
                     spreadRadius: 2,
                     offset: const Offset(0, 4),
                   ),
+                  BoxShadow(
+                    color: team.primary.withValues(alpha: 0.25),
+                    blurRadius: 48,
+                    spreadRadius: 4,
+                    offset: const Offset(0, 8),
+                  ),
                 ]
               : [
                   BoxShadow(
@@ -422,7 +479,7 @@ class _TeamCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // ── 마스코트 배경 (우하단 cropped)
+            // 마스코트 배경 (우하단 cropped)
             Positioned(
               right: -20,
               bottom: -20,
@@ -437,7 +494,7 @@ class _TeamCard extends StatelessWidget {
               ),
             ),
 
-            // ── 패턴 텍스처
+            // 패턴 텍스처
             Positioned.fill(
               child: Opacity(
                 opacity: 0.08,
@@ -449,7 +506,7 @@ class _TeamCard extends StatelessWidget {
               ),
             ),
 
-            // ── 선택 체크마크
+            // 선택 체크마크
             if (selected)
               Positioned(
                 top: DTokens.s8,
@@ -470,7 +527,7 @@ class _TeamCard extends StatelessWidget {
                     ),
               ),
 
-            // ── 콘텐츠
+            // 콘텐츠
             Padding(
               padding: const EdgeInsets.all(DTokens.s14),
               child: Column(
@@ -479,11 +536,11 @@ class _TeamCard extends StatelessWidget {
                   // 실제 KBO 로고
                   Image.asset(
                     team.crestAsset,
-                    width: 52,
-                    height: 52,
+                    width: 48,
+                    height: 48,
                     fit: BoxFit.contain,
                     errorBuilder: (e, s, t) =>
-                        DTeamCrest(team: team, size: 52),
+                        DTeamCrest(team: team, size: 48),
                   ),
                   const Spacer(),
                   // 영문 ALL CAPS
@@ -498,21 +555,25 @@ class _TeamCard extends StatelessWidget {
                   // 한글 팀명
                   Text(
                     team.teamName,
-                    style: DType.body(14, FontWeight.w700).copyWith(
+                    style: DType.body(13, FontWeight.w700).copyWith(
                       color: team.accent.withValues(alpha: 0.9),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  // 구장명
-                  Text(
-                    team.stadium,
-                    style: DType.label(11,
-                        color: Colors.white.withValues(alpha: 0.6)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  // mock 시즌 통계 (순위 / 우승 횟수)
+                  if (stats != null) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        _StatChip(label: stats!.$1, color: team.primary),
+                        const SizedBox(width: 4),
+                        _StatChip(
+                            label: '우승 ${stats!.$2}',
+                            color: DTokens.warning),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -523,19 +584,108 @@ class _TeamCard extends StatelessWidget {
   }
 }
 
-// ── Painter ───────────────────────────────────────────────────────────────────
+class _StatChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatChip({required this.label, required this.color});
 
-class _TeamSelectScanlinePainter extends CustomPainter {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: DType.micro(9, color: color.withValues(alpha: 0.9)),
+      ),
+    );
+  }
+}
+
+// ── confirm particle painter ──────────────────────────────────────────────────
+
+class _ConfirmParticlePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color accentColor;
+
+  static const _count = 24;
+  static final _rng = math.Random(99);
+
+  _ConfirmParticlePainter({
+    required this.progress,
+    required this.color,
+    required this.accentColor,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.013)
-      ..strokeWidth = 1;
-    for (double y = 0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    final cx = size.width / 2;
+    final cy = size.height * 0.75;
+
+    for (int i = 0; i < _count; i++) {
+      final phaseOffset = i / _count;
+      final t = ((progress - phaseOffset + 1.0) % 1.0);
+      final scaleT = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
+      final fade = (1.0 - t).clamp(0.0, 1.0);
+      if (fade < 0.02) continue;
+
+      final angle = (i / _count) * 2 * math.pi;
+      final spread = 50.0 + _rng.nextDouble() * 120.0;
+      final x = cx + math.cos(angle) * spread * scaleT;
+      final y = cy + math.sin(angle) * spread * scaleT * 0.65;
+      final pSize = 3.0 + _rng.nextDouble() * 6.0;
+
+      final useAccent = i % 3 == 0;
+      final paint = Paint()
+        ..color = (useAccent ? accentColor : color)
+            .withValues(alpha: fade * 0.85)
+        ..style = PaintingStyle.fill;
+
+      if (i % 2 == 0) {
+        _drawStar(canvas, Offset(x, y), pSize, paint);
+      } else {
+        _drawLightning(canvas, Offset(x, y), pSize, paint);
+      }
     }
   }
 
+  void _drawStar(Canvas canvas, Offset c, double s, Paint p) {
+    final path = Path();
+    for (int j = 0; j < 4; j++) {
+      final outerA = j * math.pi / 2 - math.pi / 4;
+      final innerA = outerA + math.pi / 4;
+      final ox = c.dx + math.cos(outerA) * s;
+      final oy = c.dy + math.sin(outerA) * s;
+      final ix = c.dx + math.cos(innerA) * s * 0.36;
+      final iy = c.dy + math.sin(innerA) * s * 0.36;
+      if (j == 0) {
+        path.moveTo(ox, oy);
+      } else {
+        path.lineTo(ox, oy);
+      }
+      path.lineTo(ix, iy);
+    }
+    path.close();
+    canvas.drawPath(path, p);
+  }
+
+  void _drawLightning(Canvas canvas, Offset c, double s, Paint p) {
+    final path = Path()
+      ..moveTo(c.dx + s * 0.2, c.dy - s)
+      ..lineTo(c.dx - s * 0.1, c.dy - s * 0.05)
+      ..lineTo(c.dx + s * 0.3, c.dy - s * 0.05)
+      ..lineTo(c.dx - s * 0.2, c.dy + s)
+      ..lineTo(c.dx + s * 0.1, c.dy + s * 0.05)
+      ..lineTo(c.dx - s * 0.3, c.dy + s * 0.05)
+      ..close();
+    canvas.drawPath(path, p);
+  }
+
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_ConfirmParticlePainter old) =>
+      old.progress != progress;
 }

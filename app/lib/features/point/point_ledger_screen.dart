@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +8,8 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
-import '../../shared/widgets/d_scoreboard.dart';
 
 // ── icon helpers ──────────────────────────────────────────────────────────────
 
@@ -98,7 +100,7 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
     final filtered = _filtered;
 
     final earned = _entries.where((e) => e.amount > 0).fold(0, (a, b) => a + b.amount);
-    final spent = _entries.where((e) => e.amount < 0).fold(0, (a, b) => a + b.amount.abs());
+    final spent  = _entries.where((e) => e.amount < 0).fold(0, (a, b) => a + b.amount.abs());
 
     return Scaffold(
       backgroundColor: DTokens.bgDark,
@@ -108,13 +110,7 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
         leading: const BackButton(),
         title: Row(
           children: [
-            Image.asset(
-              'assets/images/icons/scoreboard.png',
-              width: 20,
-              height: 20,
-              errorBuilder: (e, s, t) =>
-                  Icon(Icons.account_balance_wallet_rounded, size: 20, color: team.primary),
-            ),
+            Icon(Icons.account_balance_wallet_rounded, size: 20, color: team.primary),
             const SizedBox(width: DTokens.s8),
             Text('포인트 내역', style: DType.heading(17, color: Colors.white)),
           ],
@@ -128,21 +124,16 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
       ),
       body: Stack(
         children: [
-          // 팀컬러 글로우
+          // 팀컬러 글로우 배경
           Positioned(
-            top: -40,
-            left: -40,
-            right: -40,
+            top: -60, left: -40, right: -40,
             child: Container(
-              height: 240,
+              height: 280,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topCenter,
                   radius: 0.8,
-                  colors: [
-                    team.primary.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
+                  colors: [team.primary.withValues(alpha: 0.14), Colors.transparent],
                 ),
               ),
             ),
@@ -150,15 +141,20 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
 
           CustomScrollView(
             slivers: [
-              // ── 잔액 카드
+              // ── 잔액 카드 (DShimmerSweep + DMultiPulseGlow)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s8, DTokens.s16, 0),
-                  child: _BalanceCard(
-                    point: user.point,
-                    earned: earned,
-                    spent: spent,
-                  ),
+                  child: _BalanceCard(point: user.point, earned: earned, spent: spent),
+                ),
+              ),
+
+              // ── 미니 바 차트
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, 0),
+                  child: _EarnedSpentChart(earned: earned, spent: spent)
+                      .animate(delay: 200.ms).fadeIn(duration: 400.ms),
                 ),
               ),
 
@@ -173,12 +169,10 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
                 ),
               ),
 
-              // ── 내역 리스트
+              // ── 내역 리스트 (15건)
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
-                  DTokens.s16,
-                  0,
-                  DTokens.s16,
+                  DTokens.s16, 0, DTokens.s16,
                   MediaQuery.of(context).padding.bottom + DTokens.s24,
                 ),
                 sliver: SliverList(
@@ -205,7 +199,7 @@ class _PointLedgerScreenState extends ConsumerState<PointLedgerScreen> {
   }
 }
 
-// ── balance card ──────────────────────────────────────────────────────────────
+// ── balance card (큰 scoreboard + DShimmerSweep + DMultiPulseGlow) ────────────
 
 class _BalanceCard extends StatelessWidget {
   final int point;
@@ -216,49 +210,190 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    final total = (earned + spent).toDouble();
-    final earnedRatio = total == 0 ? 0.5 : earned / total;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(DTokens.r24),
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 3000),
+      highlightOpacity: 0.16,
       child: Container(
-        height: 8,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: team.primary,
-          boxShadow: [
-            BoxShadow(
-              color: team.primary.withValues(alpha: 0.5),
-              blurRadius: 6,
+          borderRadius: BorderRadius.circular(DTokens.r24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [team.primary.withValues(alpha: 0.28), team.secondary.withValues(alpha: 0.16)],
+          ),
+          border: Border.all(color: team.primary.withValues(alpha: 0.45), width: 1.5),
+          boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.30), blurRadius: 32, offset: const Offset(0, 10))],
+        ),
+        child: Stack(
+          children: [
+            // 다이아몬드 그리드
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DDiamondGridPainter(team.primary.withValues(alpha: 0.08), step: 36),
+              ),
+            ),
+            // 스캔라인
+            Positioned.fill(
+              child: CustomPaint(painter: DScanlinePainter(opacity: 0.013)),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(DTokens.s24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      DMultiPulseGlow(
+                        color: team.primary,
+                        accentColor: team.accent,
+                        size: 12,
+                        child: Container(
+                          width: 12, height: 12,
+                          decoration: BoxDecoration(color: team.primary, shape: BoxShape.circle),
+                        ),
+                      ),
+                      const SizedBox(width: DTokens.s8),
+                      Text('BALANCE', style: DType.label(11, color: team.primary, letterSpacing: 2.5)),
+                    ],
+                  ),
+                  const SizedBox(height: DTokens.s12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        _fmt(point),
+                        style: DType.scoreboardDigital(56, color: Colors.white),
+                      ),
+                      const SizedBox(width: DTokens.s8),
+                      Text('P', style: DType.heading(28, color: team.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: DTokens.s16),
+                  Row(
+                    children: [
+                      _MiniStat(label: '총 적립', value: '+${_fmt(earned)} P', color: DTokens.success),
+                      const SizedBox(width: DTokens.s24),
+                      _MiniStat(label: '총 사용', value: '-${_fmt(spent)} P', color: DTokens.danger),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.05);
+    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.06);
   }
 }
 
-class _Legend extends StatelessWidget {
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: DType.label(10, color: DTokens.textTertiaryDark)),
+        Text(value, style: DType.mono(15, color: color, weight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+// ── 적립/사용 바 차트 ─────────────────────────────────────────────────────────
+
+class _EarnedSpentChart extends StatelessWidget {
+  final int earned;
+  final int spent;
+  const _EarnedSpentChart({required this.earned, required this.spent});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = math.max(earned + spent, 1);
+    final earnedFrac = earned / total;
+    final spentFrac  = spent / total;
+
+    return DGlassPanel(
+      padding: const EdgeInsets.all(DTokens.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bar_chart_rounded, size: 16, color: DTokens.textSecondaryDark),
+              const SizedBox(width: DTokens.s8),
+              Text('적립 / 사용 비율', style: DType.label(12, color: DTokens.textSecondaryDark)),
+            ],
+          ),
+          const SizedBox(height: DTokens.s12),
+          // 이중 바 차트
+          ClipRRect(
+            borderRadius: BorderRadius.circular(DTokens.rPill),
+            child: SizedBox(
+              height: 12,
+              child: Row(
+                children: [
+                  Flexible(
+                    flex: (earnedFrac * 1000).toInt(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [DTokens.success, DTokens.success.withValues(alpha: 0.7)],
+                        ),
+                        boxShadow: [BoxShadow(color: DTokens.success.withValues(alpha: 0.6), blurRadius: 6)],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    flex: (spentFrac * 1000).toInt(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [DTokens.danger.withValues(alpha: 0.7), DTokens.danger],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: DTokens.s8),
+          Row(
+            children: [
+              _ChartLegend(color: DTokens.success, label: '적립', value: '${(earnedFrac * 100).toStringAsFixed(0)}%'),
+              const Spacer(),
+              _ChartLegend(color: DTokens.danger, label: '사용', value: '${(spentFrac * 100).toStringAsFixed(0)}%'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartLegend extends StatelessWidget {
   final Color color;
   final String label;
-  final int value;
-  const _Legend({required this.color, required this.label, required this.value});
+  final String value;
+  const _ChartLegend({required this.color, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(label, style: DType.body(11).copyWith(color: DTokens.textSecondaryDark)),
-        const SizedBox(width: DTokens.s4),
-        Text(
-          '${_fmt(value)} P',
-          style: DType.mono(12, color: color, weight: FontWeight.w700),
-        ),
+        Text(label, style: DType.caption(12, color: DTokens.textSecondaryDark)),
+        const SizedBox(width: 4),
+        Text(value, style: DType.mono(13, color: color, weight: FontWeight.w700)),
       ],
     );
   }
@@ -289,14 +424,10 @@ class _FilterRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(DTokens.rPill),
                 border: Border.all(
                   color: selected ? team.primary : DTokens.borderDark,
+                  width: selected ? 1.5 : 1.0,
                 ),
                 boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: team.primary.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                        ),
-                      ]
+                    ? [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 10)]
                     : null,
               ),
               child: Text(
@@ -326,32 +457,36 @@ class _EntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final team = context.team;
+    final team   = context.team;
     final isPlus = entry.amount > 0;
-    final color = isPlus ? team.primary : DTokens.danger;
+    final color  = isPlus ? team.primary : DTokens.danger;
 
-    return DGlassPanel(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: DTokens.s16, vertical: DTokens.s12),
-      radius: DTokens.r16,
+      decoration: BoxDecoration(
+        color: DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r16),
+        border: Border.all(
+          color: isPlus ? team.primary.withValues(alpha: 0.20) : DTokens.danger.withValues(alpha: 0.15),
+        ),
+      ),
       child: Row(
         children: [
           // 아이콘 버블
           Container(
-            width: 44,
-            height: 44,
+            width: 44, height: 44,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: 0.25)),
             ),
             child: Center(
               child: Image.asset(
                 _entryIcon(entry.title),
-                width: 20,
-                height: 20,
+                width: 20, height: 20,
                 color: color,
                 colorBlendMode: BlendMode.srcIn,
-                errorBuilder: (e, s, t) =>
-                    Icon(_entryFallback(entry.title), size: 20, color: color),
+                errorBuilder: (e, s, t) => Icon(_entryFallback(entry.title), size: 20, color: color),
               ),
             ),
           ),
@@ -362,24 +497,34 @@ class _EntryTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  entry.title,
-                  style: DType.body(14, FontWeight.w600)
-                      .copyWith(color: DTokens.textPrimaryDark),
-                ),
+                Text(entry.title, style: DType.body(14, FontWeight.w600).copyWith(color: DTokens.textPrimaryDark)),
                 const SizedBox(height: 2),
-                Text(
-                  _timeLabel(entry.time),
-                  style: DType.mono(11, color: DTokens.textTertiaryDark),
-                ),
+                Text(_timeLabel(entry.time), style: DType.mono(11, color: DTokens.textTertiaryDark)),
               ],
             ),
           ),
 
-          // 금액
-          Text(
-            '${isPlus ? "+" : ""}${isPlus ? _fmt(entry.amount) : "-${_fmt(entry.amount.abs())}"} P',
-            style: DType.mono(16, color: color, weight: FontWeight.w800),
+          // 금액 (오른쪽 정렬)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isPlus ? "+" : "-"}${_fmt(entry.amount.abs())} P',
+                style: DType.mono(16, color: color, weight: FontWeight.w800),
+              ),
+              Container(
+                margin: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(DTokens.rPill),
+                ),
+                child: Text(
+                  entry.category,
+                  style: DType.label(9, color: color),
+                ),
+              ),
+            ],
           ),
         ],
       ),

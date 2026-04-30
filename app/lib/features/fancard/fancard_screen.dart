@@ -10,6 +10,7 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_scoreboard.dart';
 import '../../shared/widgets/d_team_crest.dart';
@@ -32,14 +33,14 @@ class _Badge {
 }
 
 const _mockBadges = [
-  _Badge(id: 'first_sortie', name: '첫 출정', icon: Icons.rocket_launch_rounded, rarity: 'COMMON', color: DTokens.info),
-  _Badge(id: 'rookie_predictor', name: '신인 예측가', icon: Icons.psychology_rounded, rarity: 'RARE', color: DTokens.warning),
-  _Badge(id: 'night_owl', name: '야행성 팬', icon: Icons.nightlight_rounded, rarity: 'RARE', color: Color(0xFF9B6DFF)),
-  _Badge(id: 'streak7', name: '7일 연속', icon: Icons.local_fire_department_rounded, rarity: 'EPIC', color: DTokens.danger),
-  _Badge(id: 'first_win', name: '첫 예측 적중', icon: Icons.military_tech_rounded, rarity: 'COMMON', color: DTokens.success),
-  _Badge(id: 'stadium_10', name: '직관 10회', icon: Icons.stadium_rounded, rarity: 'EPIC', color: Color(0xFF00C4B4)),
-  _Badge(id: 'season_complete', name: '시즌 완주', icon: Icons.emoji_events_rounded, rarity: 'LEGENDARY', color: DTokens.warning),
-  _Badge(id: 'top_fan', name: '상위 1%', icon: Icons.workspace_premium_rounded, rarity: 'LEGENDARY', color: Color(0xFFFF6B9D)),
+  _Badge(id: 'first_sortie',    name: '첫 출정',    icon: Icons.rocket_launch_rounded,        rarity: 'COMMON',    color: DTokens.info),
+  _Badge(id: 'rookie_pred',     name: '신인 예측가', icon: Icons.psychology_rounded,           rarity: 'RARE',      color: DTokens.warning),
+  _Badge(id: 'night_owl',       name: '야행성 팬',   icon: Icons.nightlight_rounded,           rarity: 'RARE',      color: Color(0xFF9B6DFF)),
+  _Badge(id: 'streak7',         name: '7일 연속',    icon: Icons.local_fire_department_rounded, rarity: 'EPIC',      color: DTokens.danger),
+  _Badge(id: 'first_win',       name: '첫 예측 적중', icon: Icons.military_tech_rounded,       rarity: 'COMMON',    color: DTokens.success),
+  _Badge(id: 'stadium_10',      name: '직관 10회',   icon: Icons.stadium_rounded,              rarity: 'EPIC',      color: Color(0xFF00C4B4)),
+  _Badge(id: 'season_complete', name: '시즌 완주',   icon: Icons.emoji_events_rounded,         rarity: 'LEGENDARY', color: DTokens.warning),
+  _Badge(id: 'top_fan',         name: '상위 1%',    icon: Icons.workspace_premium_rounded,     rarity: 'LEGENDARY', color: Color(0xFFFF6B9D)),
 ];
 
 class _Activity {
@@ -58,11 +59,11 @@ class _Activity {
 }
 
 const _mockActivities = [
-  _Activity(title: '출정 완료', subtitle: '오늘의 출정 성공 +50P', icon: Icons.rocket_launch_rounded, color: DTokens.info, time: '2시간 전'),
-  _Activity(title: '예측 적중', subtitle: 'LG vs KIA 경기 승리팀 적중 +200P', icon: Icons.psychology_rounded, color: DTokens.success, time: '어제'),
-  _Activity(title: '퀘스트 완료', subtitle: '응원 댓글 3개 작성 +30P', icon: Icons.assignment_turned_in_rounded, color: DTokens.warning, time: '2일 전'),
-  _Activity(title: '출정 완료', subtitle: '오늘의 출정 성공 +50P', icon: Icons.rocket_launch_rounded, color: DTokens.info, time: '3일 전'),
-  _Activity(title: '배지 획득', subtitle: '7일 연속 출정 달성', icon: Icons.military_tech_rounded, color: Color(0xFF9B6DFF), time: '1주일 전'),
+  _Activity(title: '출정 완료',   subtitle: '오늘의 출정 성공 +50P',              icon: Icons.rocket_launch_rounded,        color: DTokens.info,    time: '2시간 전'),
+  _Activity(title: '예측 적중',   subtitle: 'LG vs KIA 경기 승리팀 적중 +200P',  icon: Icons.psychology_rounded,           color: DTokens.success, time: '어제'),
+  _Activity(title: '퀘스트 완료', subtitle: '응원 댓글 3개 작성 +30P',            icon: Icons.assignment_turned_in_rounded, color: DTokens.warning, time: '2일 전'),
+  _Activity(title: '출정 완료',   subtitle: '오늘의 출정 성공 +50P',              icon: Icons.rocket_launch_rounded,        color: DTokens.info,    time: '3일 전'),
+  _Activity(title: '배지 획득',   subtitle: '7일 연속 출정 달성',                 icon: Icons.military_tech_rounded,        color: Color(0xFF9B6DFF), time: '1주일 전'),
 ];
 
 // ── screen ────────────────────────────────────────────────────────────────────
@@ -80,7 +81,8 @@ class FancardScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: DTokens.bgDark,
         elevation: 0,
-        title: Text('내 팬카드', style: DType.heading(17, color: Colors.white)),
+        title: Text('내 팬카드',
+            style: DType.heading(17, color: Colors.white)),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_rounded, size: 22),
@@ -91,7 +93,7 @@ class FancardScreen extends ConsumerWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── backdrop layer
+          // ── backdrop
           _FancardBackdrop(team: team),
 
           // ── content
@@ -99,21 +101,27 @@ class FancardScreen extends ConsumerWidget {
             padding: EdgeInsets.zero,
             physics: const BouncingScrollPhysics(),
             children: [
-              // ── 팬카드 히어로
+              // ── 팬카드 히어로 (시즌권 비율 1.6:1, 3D tilt)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                     DTokens.s16, DTokens.s4, DTokens.s16, 0),
-                child: _FancardHero(user: user)
+                child: D3DTiltCard(
+                  child: _FancardHero(user: user),
+                )
                     .animate()
                     .fadeIn(duration: 500.ms)
-                    .slideY(begin: -0.06, curve: Curves.easeOut),
+                    .slideY(
+                      begin: -0.06,
+                      curve: Curves.easeOutBack,
+                    ),
               ),
 
               const SizedBox(height: DTokens.s20),
 
-              // ── 시즌 통계 (DScoreboard 4종)
+              // ── 시즌 통계 4종 (DScoreboard)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DTokens.s16),
                 child: _SeasonStats(user: user)
                     .animate()
                     .fadeIn(delay: 120.ms, duration: 400.ms),
@@ -121,9 +129,10 @@ class FancardScreen extends ConsumerWidget {
 
               const SizedBox(height: 28),
 
-              // ── 배지 컬렉션
+              // ── 배지 컬렉션 8종 (희귀도 컬러 + 펄스)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DTokens.s16),
                 child: _SectionLabel(
                   title: '획득 배지',
                   count: _mockBadges.length,
@@ -132,7 +141,8 @@ class FancardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DTokens.s12),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DTokens.s16),
                 child: GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -144,22 +154,26 @@ class FancardScreen extends ConsumerWidget {
                     childAspectRatio: 0.82,
                   ),
                   itemCount: _mockBadges.length,
-                  itemBuilder: (context, i) => _BadgeCell(badge: _mockBadges[i])
-                      .animate()
-                      .fadeIn(delay: Duration(milliseconds: 150 + 45 * i))
-                      .scale(
-                        begin: const Offset(0.75, 0.75),
-                        curve: Curves.elasticOut,
-                        duration: 600.ms,
-                      ),
+                  itemBuilder: (context, i) =>
+                      _BadgeCell(badge: _mockBadges[i])
+                          .animate()
+                          .fadeIn(
+                              delay:
+                                  Duration(milliseconds: 150 + 45 * i))
+                          .scale(
+                            begin: const Offset(0.75, 0.75),
+                            curve: Curves.elasticOut,
+                            duration: 600.ms,
+                          ),
                 ),
               ),
 
               const SizedBox(height: 28),
 
-              // ── 최근 활동
+              // ── 최근 활동 타임라인
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DTokens.s16),
                 child: _SectionLabel(
                   title: '최근 활동',
                   count: 0,
@@ -168,16 +182,21 @@ class FancardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DTokens.s12),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DTokens.s16),
                 child: Column(
                   children: [
                     ..._mockActivities.asMap().entries.map(
                       (e) => _TimelineTile(
                         activity: e.value,
-                        isLast: e.key == _mockActivities.length - 1,
+                        isLast:
+                            e.key == _mockActivities.length - 1,
                       )
                           .animate()
-                          .fadeIn(delay: Duration(milliseconds: 200 + 70 * e.key))
+                          .fadeIn(
+                              delay: Duration(
+                                  milliseconds:
+                                      200 + 70 * e.key))
                           .slideX(begin: -0.04),
                     ),
                   ],
@@ -192,12 +211,14 @@ class FancardScreen extends ConsumerWidget {
                   DTokens.s16,
                   0,
                   DTokens.s16,
-                  MediaQuery.of(context).padding.bottom + DTokens.s24,
+                  MediaQuery.of(context).padding.bottom +
+                      DTokens.s24,
                 ),
                 child: DButton(
                   label: '프로필 꾸미기',
                   icon: Icons.tune_rounded,
-                  onPressed: () => context.push('/fancard/customize'),
+                  onPressed: () =>
+                      context.push('/fancard/customize'),
                 ),
               ),
             ],
@@ -250,7 +271,7 @@ class _FancardBackdropState extends State<_FancardBackdrop>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. mood image backdrop
+        // 1. mood image
         Positioned.fill(
           child: Image.asset(
             moodAsset,
@@ -262,7 +283,7 @@ class _FancardBackdropState extends State<_FancardBackdrop>
           ),
         ),
 
-        // 2. vignette gradient
+        // 2. vignette
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -280,7 +301,7 @@ class _FancardBackdropState extends State<_FancardBackdrop>
           ),
         ),
 
-        // 3. 팀 컬러 radial glow — top center
+        // 3. team radial glow — top center
         AnimatedBuilder(
           animation: _glowCtrl,
           builder: (context, _) {
@@ -323,19 +344,17 @@ class _FancardBackdropState extends State<_FancardBackdrop>
                 'assets/images/icons/baseball.png',
                 width: 240,
                 height: 240,
-                errorBuilder: (context, error, stackTrace) => const SizedBox(
-                  width: 240,
-                  height: 240,
-                ),
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox(width: 240, height: 240),
               ),
             ),
           ),
         ),
 
-        // 5. 다이아몬드 그리드
+        // 5. diamond grid
         Positioned.fill(
           child: CustomPaint(
-            painter: _FancardDiamondPainter(
+            painter: DDiamondGridPainter(
               primary.withValues(alpha: 0.032),
             ),
           ),
@@ -345,38 +364,7 @@ class _FancardBackdropState extends State<_FancardBackdrop>
   }
 }
 
-// ── diamond painter ───────────────────────────────────────────────────────────
-
-class _FancardDiamondPainter extends CustomPainter {
-  final Color color;
-  const _FancardDiamondPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 0.6
-      ..style = PaintingStyle.stroke;
-    const step = 44.0;
-    for (double y = -step; y < size.height + step; y += step) {
-      for (double x = -step; x < size.width + step; x += step) {
-        final path = Path()
-          ..moveTo(x + step / 2, y)
-          ..lineTo(x + step, y + step / 2)
-          ..lineTo(x + step / 2, y + step)
-          ..lineTo(x, y + step / 2)
-          ..close();
-        canvas.drawPath(path, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _FancardDiamondPainter old) =>
-      old.color != color;
-}
-
-// ── fancard hero ──────────────────────────────────────────────────────────────
+// ── fancard hero (시즌권 비율 1.6:1, 3D tilt은 부모에서 처리) ─────────────────
 
 class _FancardHero extends StatefulWidget {
   final dynamic user;
@@ -395,7 +383,7 @@ class _FancardHeroState extends State<_FancardHero>
     super.initState();
     _sweepCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: const Duration(milliseconds: 3200),
     )..repeat();
   }
 
@@ -408,8 +396,9 @@ class _FancardHeroState extends State<_FancardHero>
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    final cardWidth = MediaQuery.of(context).size.width - DTokens.s16 * 2;
-    final cardHeight = cardWidth / 1.6;
+    final cardWidth =
+        MediaQuery.of(context).size.width - DTokens.s16 * 2;
+    final cardHeight = cardWidth / 1.6; // 시즌권 비율 1.6:1
 
     return Container(
       width: cardWidth,
@@ -463,7 +452,9 @@ class _FancardHeroState extends State<_FancardHero>
 
           // 스캔라인 질감
           Positioned.fill(
-            child: CustomPaint(painter: _ScanlinePainter()),
+            child: CustomPaint(
+              painter: DScanlinePainter(opacity: 0.022),
+            ),
           ),
 
           // 마스코트 우하단 large cropped
@@ -503,7 +494,9 @@ class _FancardHeroState extends State<_FancardHero>
 
           // 하단 vignette
           Positioned(
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             height: cardHeight * 0.4,
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -519,7 +512,7 @@ class _FancardHeroState extends State<_FancardHero>
             ),
           ),
 
-          // 라이팅 sweep — gradient 좌→우 천천히 이동
+          // Shimmer sweep (Phase 3: 좌→우 빛 sweep 3.2초 주기)
           AnimatedBuilder(
             animation: _sweepCtrl,
             builder: (context, _) {
@@ -534,10 +527,11 @@ class _FancardHeroState extends State<_FancardHero>
                         end: Alignment.centerRight,
                         colors: [
                           Colors.transparent,
-                          Colors.white.withValues(alpha: 0.14),
+                          Colors.white.withValues(alpha: 0.16),
+                          Colors.white.withValues(alpha: 0.08),
                           Colors.transparent,
                         ],
-                        stops: const [0.0, 0.5, 1.0],
+                        stops: const [0.0, 0.45, 0.55, 1.0],
                       ),
                     ),
                   ),
@@ -556,7 +550,6 @@ class _FancardHeroState extends State<_FancardHero>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 실제 KBO 로고 (투명 배경 PNG)
                     Image.asset(
                       team.crestAsset,
                       width: 44,
@@ -572,12 +565,14 @@ class _FancardHeroState extends State<_FancardHero>
                         Text(
                           'DUGOUT FAN CARD',
                           style: DType.label(10,
-                              color: team.accent.withValues(alpha: 0.6)),
+                              color: team.accent
+                                  .withValues(alpha: 0.6)),
                         ),
                         Text(
                           team.teamName,
                           style: DType.label(12,
-                              color: team.accent.withValues(alpha: 0.85)),
+                              color: team.accent
+                                  .withValues(alpha: 0.85)),
                         ),
                       ],
                     ),
@@ -589,23 +584,27 @@ class _FancardHeroState extends State<_FancardHero>
                           padding: const EdgeInsets.symmetric(
                               horizontal: DTokens.s8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(DTokens.rPill),
+                            color: Colors.white
+                                .withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(
+                                DTokens.rPill),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: Colors.white
+                                  .withValues(alpha: 0.2),
                             ),
                           ),
                           child: Text(
                             'SEASON 2026',
-                            style: DType.badge(8, color: team.accent),
+                            style: DType.badge(8,
+                                color: team.accent),
                           ),
                         ),
                         const SizedBox(height: DTokens.s4),
-                        // 카드번호 mono
                         Text(
                           '#0042',
                           style: DType.mono(10,
-                              color: team.accent.withValues(alpha: 0.5)),
+                              color: team.accent
+                                  .withValues(alpha: 0.5)),
                         ),
                       ],
                     ),
@@ -621,9 +620,8 @@ class _FancardHeroState extends State<_FancardHero>
                 ),
                 const SizedBox(height: DTokens.s4),
 
-                // 가입 시즌 — mono
                 Text(
-                  '가입 시즌 2024  ·  NO. ${(widget.user.id as String).substring(0, 8).toUpperCase()}',
+                  '가입 시즌 2024  ·  NO. ${(widget.user.id as String).padRight(8, '0').substring(0, 8).toUpperCase()}',
                   style: DType.mono(9,
                       color: team.accent.withValues(alpha: 0.5),
                       weight: FontWeight.w500),
@@ -631,14 +629,14 @@ class _FancardHeroState extends State<_FancardHero>
 
                 const SizedBox(height: DTokens.s8),
 
-                // tagline 인용 bar
                 Row(
                   children: [
                     Container(
                       width: 3,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: team.accent.withValues(alpha: 0.4),
+                        color:
+                            team.accent.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -650,7 +648,8 @@ class _FancardHeroState extends State<_FancardHero>
                         overflow: TextOverflow.ellipsis,
                         style: DType.body(14).copyWith(
                           fontStyle: FontStyle.italic,
-                          color: team.accent.withValues(alpha: 0.7),
+                          color: team.accent
+                              .withValues(alpha: 0.7),
                           height: 1.4,
                         ),
                       ),
@@ -664,23 +663,6 @@ class _FancardHeroState extends State<_FancardHero>
       ),
     );
   }
-}
-
-// ── scanline painter ──────────────────────────────────────────────────────────
-
-class _ScanlinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.022)
-      ..strokeWidth = 1;
-    for (double y = 0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ── season stats ──────────────────────────────────────────────────────────────
@@ -707,7 +689,10 @@ class _SeasonStats extends StatelessWidget {
               align: TextAlign.center,
             ),
           ),
-          Container(width: 1, height: 44, color: DTokens.borderDark),
+          Container(
+              width: 1,
+              height: 44,
+              color: DTokens.borderDark),
           Expanded(
             child: DScoreboard(
               value: '${user.stadiumVisits}',
@@ -717,7 +702,10 @@ class _SeasonStats extends StatelessWidget {
               align: TextAlign.center,
             ),
           ),
-          Container(width: 1, height: 44, color: DTokens.borderDark),
+          Container(
+              width: 1,
+              height: 44,
+              color: DTokens.borderDark),
           Expanded(
             child: DScoreboard(
               value: '68%',
@@ -727,7 +715,10 @@ class _SeasonStats extends StatelessWidget {
               align: TextAlign.center,
             ),
           ),
-          Container(width: 1, height: 44, color: DTokens.borderDark),
+          Container(
+              width: 1,
+              height: 44,
+              color: DTokens.borderDark),
           Expanded(
             child: DScoreboard(
               value: '${user.contribution}',
@@ -782,7 +773,8 @@ class _SectionLabel extends StatelessWidget {
                 horizontal: DTokens.s8, vertical: 2),
             decoration: BoxDecoration(
               color: team.primary.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(DTokens.rPill),
+              borderRadius:
+                  BorderRadius.circular(DTokens.rPill),
             ),
             child: Text(
               '$count개',
@@ -795,7 +787,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ── badge cell ────────────────────────────────────────────────────────────────
+// ── badge cell (희귀도 컬러 + 펄스) ──────────────────────────────────────────
 
 class _BadgeCell extends StatelessWidget {
   final _Badge badge;
@@ -810,11 +802,14 @@ class _BadgeCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = _rarityBg[badge.rarity] ?? DTokens.surfaceDark2;
-    final isLegendary = badge.rarity == 'LEGENDARY';
+    final isPulsing =
+        badge.rarity == 'LEGENDARY' || badge.rarity == 'EPIC';
 
     return Column(
       children: [
-        _BadgeIcon(badge: badge, bg: bg, isLegendary: isLegendary),
+        isPulsing
+            ? _PulsingBadgeIcon(badge: badge, bg: bg)
+            : _StaticBadgeIcon(badge: badge, bg: bg),
         const SizedBox(height: DTokens.s4),
         Text(
           badge.name,
@@ -834,21 +829,42 @@ class _BadgeCell extends StatelessWidget {
   }
 }
 
-class _BadgeIcon extends StatefulWidget {
+class _StaticBadgeIcon extends StatelessWidget {
   final _Badge badge;
   final Color bg;
-  final bool isLegendary;
-  const _BadgeIcon({
-    required this.badge,
-    required this.bg,
-    required this.isLegendary,
-  });
+  const _StaticBadgeIcon({required this.badge, required this.bg});
 
   @override
-  State<_BadgeIcon> createState() => _BadgeIconState();
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(DTokens.r16),
+        border: Border.all(
+          color: badge.color.withValues(alpha: 0.55),
+          width: 1,
+        ),
+      ),
+      child: Icon(badge.icon, color: badge.color, size: 26),
+    );
+  }
 }
 
-class _BadgeIconState extends State<_BadgeIcon>
+/// LEGENDARY / EPIC 배지 — 다중 펄스 글로우
+class _PulsingBadgeIcon extends StatefulWidget {
+  final _Badge badge;
+  final Color bg;
+  const _PulsingBadgeIcon(
+      {required this.badge, required this.bg});
+
+  @override
+  State<_PulsingBadgeIcon> createState() =>
+      _PulsingBadgeIconState();
+}
+
+class _PulsingBadgeIconState extends State<_PulsingBadgeIcon>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
@@ -858,8 +874,7 @@ class _BadgeIconState extends State<_BadgeIcon>
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    );
-    if (widget.isLegendary) _ctrl.repeat(reverse: true);
+    )..repeat(reverse: true);
   }
 
   @override
@@ -870,37 +885,30 @@ class _BadgeIconState extends State<_BadgeIcon>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isLegendary) return _buildContainer(0.0);
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (context, _) => _buildContainer(_ctrl.value),
-    );
-  }
-
-  Widget _buildContainer(double glowValue) {
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        color: widget.bg,
-        borderRadius: BorderRadius.circular(DTokens.r16),
-        border: Border.all(
-          color: widget.badge.color.withValues(alpha: 0.55),
-          width: widget.isLegendary ? 1.5 : 1,
+      builder: (context, _) => Container(
+        width: 58,
+        height: 58,
+        decoration: BoxDecoration(
+          color: widget.bg,
+          borderRadius: BorderRadius.circular(DTokens.r16),
+          border: Border.all(
+            color: widget.badge.color.withValues(alpha: 0.55),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: widget.badge.color
+                  .withValues(alpha: 0.2 + _ctrl.value * 0.45),
+              blurRadius: 8 + _ctrl.value * 18,
+              spreadRadius: _ctrl.value * 2.5,
+            ),
+          ],
         ),
-        boxShadow: widget.isLegendary
-            ? [
-                BoxShadow(
-                  color: widget.badge.color
-                      .withValues(alpha: 0.2 + glowValue * 0.45),
-                  blurRadius: 8 + glowValue * 18,
-                  spreadRadius: glowValue * 2.5,
-                ),
-              ]
-            : null,
+        child: Icon(widget.badge.icon,
+            color: widget.badge.color, size: 26),
       ),
-      child: Icon(widget.badge.icon,
-          color: widget.badge.color, size: 26),
     );
   }
 }
@@ -910,7 +918,8 @@ class _BadgeIconState extends State<_BadgeIcon>
 class _TimelineTile extends StatelessWidget {
   final _Activity activity;
   final bool isLast;
-  const _TimelineTile({required this.activity, required this.isLast});
+  const _TimelineTile(
+      {required this.activity, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
@@ -923,13 +932,16 @@ class _TimelineTile extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: activity.color.withValues(alpha: 0.14),
+                color:
+                    activity.color.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: activity.color.withValues(alpha: 0.35),
+                  color:
+                      activity.color.withValues(alpha: 0.35),
                 ),
               ),
-              child: Icon(activity.icon, size: 18, color: activity.color),
+              child: Icon(activity.icon,
+                  size: 18, color: activity.color),
             ),
             if (!isLast)
               Container(
@@ -958,7 +970,8 @@ class _TimelineTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         activity.title,

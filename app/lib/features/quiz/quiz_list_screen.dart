@@ -7,7 +7,7 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
-import '../../shared/widgets/d_glass_panel.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_point_badge.dart';
 
 // ── 데이터 모델 ───────────────────────────────────────────────────────────
@@ -39,8 +39,6 @@ const _mockQuizzes = [
 ];
 
 final _quizFilterProvider = StateProvider<QuizCategory?>((ref) => null);
-
-// ── 카테고리 메타 ──────────────────────────────────────────────────────────
 
 const _catLabels = {
   QuizCategory.history: '역사',
@@ -119,7 +117,10 @@ class QuizListScreen extends ConsumerWidget {
                   final q = filtered[i];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: DTokens.s12),
-                    child: _QuizCard(quiz: q, onTap: () => context.push('/quiz/${q.id}'))
+                    child: D3DTiltCard(
+                      onTap: q.solved ? null : () => context.push('/quiz/${q.id}'),
+                      child: _QuizCard(quiz: q),
+                    )
                         .animate(delay: Duration(milliseconds: 60 * i))
                         .fadeIn(duration: 270.ms)
                         .slideX(begin: 0.04),
@@ -135,7 +136,7 @@ class QuizListScreen extends ConsumerWidget {
   }
 }
 
-// ── 배너 ──────────────────────────────────────────────────────────────────
+// ── 배너 (DDiamondGridPainter + DMultiPulseGlow + DShimmerSweep) ──────────
 
 class _QuizBanner extends StatelessWidget {
   final int solvedCount;
@@ -145,65 +146,80 @@ class _QuizBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, DTokens.s8),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(DTokens.r20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.55)!],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, DTokens.s8),
+      child: DShimmerSweep(
+        period: const Duration(milliseconds: 3200),
+        highlightOpacity: 0.14,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DTokens.r20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.55)!],
+            ),
+            boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 32, offset: const Offset(0, 12))],
+          ),
+          child: Stack(
+            children: [
+              // 다이아몬드 그리드
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: DDiamondGridPainter(Colors.white.withValues(alpha: 0.07), step: 36),
+                ),
+              ),
+              // 스캔라인
+              Positioned.fill(
+                child: CustomPaint(painter: DScanlinePainter(opacity: 0.013)),
+              ),
+              // 야구 아이콘 배경 대형
+              Positioned(
+                right: -24, bottom: -24,
+                child: Image.asset('assets/images/icons/baseball.png', width: 140, height: 140,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    errorBuilder: (e, s, t) => const SizedBox.shrink()),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(DTokens.s20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        DMultiPulseGlow(
+                          color: Colors.white,
+                          accentColor: team.accent,
+                          size: 10,
+                          child: Container(
+                            width: 10, height: 10,
+                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          ),
+                        ),
+                        const SizedBox(width: DTokens.s8),
+                        Text('QUIZ CHALLENGE', style: DType.label(11, color: Colors.white70, letterSpacing: 2.0)),
+                      ],
+                    ),
+                    const SizedBox(height: DTokens.s12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text('$solvedCount', style: DType.scoreboardDigital(52, color: Colors.white)),
+                        Text(' / $totalCount', style: DType.scoreboardDigital(28, color: Colors.white60)),
+                        const SizedBox(width: DTokens.s8),
+                        Text('풀이 완료', style: DType.body(16, FontWeight.w700).copyWith(color: Colors.white70)),
+                      ],
+                    ),
+                    const SizedBox(height: DTokens.s8),
+                    Text('정답을 맞히면 포인트가 자동 적립됩니다', style: DType.caption(13, color: Colors.white.withValues(alpha: 0.72))),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.4), blurRadius: 28, offset: const Offset(0, 10))],
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.12,
-              child: Image.asset(team.patternAsset, fit: BoxFit.cover,
-                  errorBuilder: (e, s, t) => const SizedBox.shrink()),
-            ),
-          ),
-          // 야구 아이콘 배경
-          Positioned(
-            right: -20, bottom: -20,
-            child: Image.asset('assets/images/icons/baseball.png', width: 120, height: 120,
-                color: Colors.white.withValues(alpha: 0.1),
-                errorBuilder: (e, s, t) => const SizedBox.shrink()),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(DTokens.s20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Image.asset('assets/images/icons/baseball.png', width: 20, height: 20,
-                        color: Colors.white,
-                        errorBuilder: (e, s, t) => const Icon(Icons.quiz_rounded, color: Colors.white, size: 20)),
-                    const SizedBox(width: DTokens.s8),
-                    Text('야구 지식을 테스트하세요!', style: DType.body(14, FontWeight.w700).copyWith(color: Colors.white)),
-                  ],
-                ),
-                const SizedBox(height: DTokens.s12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text('$solvedCount', style: DType.scoreboardDigital(48, color: Colors.white)),
-                    Text(' / $totalCount', style: DType.scoreboardDigital(28, color: Colors.white70)),
-                    const SizedBox(width: DTokens.s8),
-                    Text('풀이 완료', style: DType.body(16, FontWeight.w600).copyWith(color: Colors.white70)),
-                  ],
-                ),
-                const SizedBox(height: DTokens.s8),
-                Text('정답을 맞히면 포인트가 자동 적립됩니다', style: DType.body(14).copyWith(color: Colors.white.withValues(alpha: 0.7))),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -229,7 +245,7 @@ class _CategoryChips extends StatelessWidget {
     final team  = context.team;
     final types = [null, ...QuizCategory.values];
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
@@ -246,10 +262,27 @@ class _CategoryChips extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected ? team.primary : DTokens.surfaceDark2,
                 borderRadius: BorderRadius.circular(DTokens.rPill),
-                border: Border.all(color: isSelected ? team.primary : DTokens.borderDark),
-                boxShadow: isSelected ? [BoxShadow(color: team.primary.withValues(alpha: 0.4), blurRadius: 8)] : null,
+                border: Border.all(
+                  color: isSelected ? team.primary : DTokens.borderDark,
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 10)]
+                    : null,
               ),
-              child: Text(_labels[type]!, style: DType.label(12, color: isSelected ? Colors.white : DTokens.textSecondaryDark)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (type != null) ...[
+                    Image.asset(_catIconAssets[type]!, width: 12, height: 12,
+                        color: isSelected ? Colors.white : DTokens.textTertiaryDark,
+                        errorBuilder: (e, s, t) => Icon(Icons.quiz_rounded, size: 12,
+                            color: isSelected ? Colors.white : DTokens.textTertiaryDark)),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(_labels[type]!, style: DType.label(12, color: isSelected ? Colors.white : DTokens.textSecondaryDark)),
+                ],
+              ),
             ),
           );
         },
@@ -262,8 +295,7 @@ class _CategoryChips extends StatelessWidget {
 
 class _QuizCard extends StatelessWidget {
   final _Quiz quiz;
-  final VoidCallback onTap;
-  const _QuizCard({required this.quiz, required this.onTap});
+  const _QuizCard({required this.quiz});
 
   @override
   Widget build(BuildContext context) {
@@ -271,94 +303,120 @@ class _QuizCard extends StatelessWidget {
     final diffColor = _diffColors[quiz.difficulty]!;
     final stars     = _diffStars[quiz.difficulty]!;
 
-    return DGlassPanel(
-      teamBorder: !quiz.solved,
-      onTap: quiz.solved ? null : onTap,
-      padding: const EdgeInsets.all(DTokens.s16),
-      child: Opacity(
-        opacity: quiz.solved ? 0.55 : 1.0,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // 카테고리 배지
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
-                  decoration: BoxDecoration(
-                    color: team.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(DTokens.rPill),
-                    border: Border.all(color: team.primary.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset(_catIconAssets[quiz.category]!, width: 11, height: 11, color: team.primary,
-                          errorBuilder: (e, s, t) => Icon(Icons.quiz_rounded, size: 11, color: team.primary)),
-                      const SizedBox(width: 3),
-                      Text(_catLabels[quiz.category]!, style: DType.label(11, color: team.primary)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: DTokens.s8),
-                // 난이도 별
-                Row(
-                  children: List.generate(3, (i) => Icon(
-                    i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 14,
-                    color: i < stars ? diffColor : DTokens.borderDark,
-                  )),
-                ),
-                const SizedBox(width: DTokens.s4),
-                Text(_diffLabels[quiz.difficulty]!, style: DType.label(12, color: diffColor)),
-                const Spacer(),
-                if (quiz.solved)
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle_rounded, size: 14, color: DTokens.success),
-                      const SizedBox(width: 3),
-                      Text('완료', style: DType.badge(10, color: DTokens.success)),
-                    ],
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
-                    decoration: BoxDecoration(
-                      color: DTokens.warning.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(DTokens.rPill),
-                    ),
-                    child: Text('+${quiz.reward} P', style: DType.mono(11, color: DTokens.warning)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: DTokens.s12),
-            Text(
-              quiz.title,
-              style: DType.body(15, FontWeight.w700).copyWith(
-                color: quiz.solved ? DTokens.textTertiaryDark : DTokens.textPrimaryDark,
-                decoration: quiz.solved ? TextDecoration.lineThrough : null,
-                decorationColor: DTokens.textTertiaryDark,
-                height: 1.4,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r20),
+        border: Border.all(
+          color: quiz.solved ? DTokens.borderDark : team.primary.withValues(alpha: 0.4),
+          width: quiz.solved ? 1.0 : 1.5,
+        ),
+        boxShadow: quiz.solved
+            ? null
+            : [BoxShadow(color: team.primary.withValues(alpha: 0.12), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
+      child: Stack(
+        children: [
+          // 상단 난이도 컬러 라인
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              height: 3,
+              decoration: BoxDecoration(
+                color: quiz.solved ? DTokens.borderDark : diffColor,
+                boxShadow: quiz.solved ? null : [BoxShadow(color: diffColor.withValues(alpha: 0.7), blurRadius: 6)],
               ),
             ),
-            const SizedBox(height: DTokens.s12),
-            Row(
-              children: [
-                Image.asset('assets/images/icons/scoreboard.png', width: 13, height: 13,
-                    color: DTokens.textTertiaryDark,
-                    errorBuilder: (e, s, t) => const Icon(Icons.timer_outlined, size: 13, color: DTokens.textTertiaryDark)),
-                const SizedBox(width: 4),
-                Text('제한 ${quiz.timeLimitSecs}초', style: DType.mono(12, color: DTokens.textTertiaryDark, weight: FontWeight.w400)),
-                const Spacer(),
-                if (!quiz.solved) ...[
-                  Text('풀기', style: DType.label(12, color: team.primary)),
-                  const SizedBox(width: 3),
-                  Icon(Icons.arrow_forward_ios_rounded, size: 11, color: team.primary),
+          ),
+          Opacity(
+            opacity: quiz.solved ? 0.5 : 1.0,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, DTokens.s14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // 카테고리 배지
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
+                        decoration: BoxDecoration(
+                          color: team.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(DTokens.rPill),
+                          border: Border.all(color: team.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(_catIconAssets[quiz.category]!, width: 11, height: 11, color: team.primary,
+                                errorBuilder: (e, s, t) => Icon(Icons.quiz_rounded, size: 11, color: team.primary)),
+                            const SizedBox(width: 3),
+                            Text(_catLabels[quiz.category]!, style: DType.label(11, color: team.primary)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: DTokens.s8),
+                      // 난이도 별
+                      Row(
+                        children: List.generate(3, (i) => Icon(
+                          i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                          size: 14,
+                          color: i < stars ? diffColor : DTokens.borderDark,
+                        )),
+                      ),
+                      const SizedBox(width: DTokens.s4),
+                      Text(_diffLabels[quiz.difficulty]!, style: DType.label(11, color: diffColor)),
+                      const Spacer(),
+                      if (quiz.solved)
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, size: 14, color: DTokens.success),
+                            const SizedBox(width: 3),
+                            Text('완료', style: DType.label(11, color: DTokens.success)),
+                          ],
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
+                          decoration: BoxDecoration(
+                            color: DTokens.warning.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(DTokens.rPill),
+                            border: Border.all(color: DTokens.warning.withValues(alpha: 0.3)),
+                          ),
+                          child: Text('+${quiz.reward} P', style: DType.mono(11, color: DTokens.warning, weight: FontWeight.w700)),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: DTokens.s12),
+                  Text(
+                    quiz.title,
+                    style: DType.body(15, FontWeight.w700).copyWith(
+                      color: quiz.solved ? DTokens.textTertiaryDark : DTokens.textPrimaryDark,
+                      decoration: quiz.solved ? TextDecoration.lineThrough : null,
+                      decorationColor: DTokens.textTertiaryDark,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: DTokens.s12),
+                  Row(
+                    children: [
+                      Icon(Icons.timer_outlined, size: 13, color: DTokens.textTertiaryDark),
+                      const SizedBox(width: 4),
+                      Text('제한 ${quiz.timeLimitSecs}초', style: DType.mono(12, color: DTokens.textTertiaryDark, weight: FontWeight.w400)),
+                      const Spacer(),
+                      if (!quiz.solved) ...[
+                        Text('풀기', style: DType.label(12, color: team.primary)),
+                        const SizedBox(width: 3),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 11, color: team.primary),
+                      ],
+                    ],
+                  ),
                 ],
-              ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

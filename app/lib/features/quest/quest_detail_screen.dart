@@ -7,6 +7,7 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_scoreboard.dart';
 
@@ -65,7 +66,7 @@ class QuestDetailScreen extends ConsumerWidget {
       _allDetails.firstWhere((q) => q.id == id, orElse: () => _allDetails.first);
 }
 
-// ── 히어로 카드 ───────────────────────────────────────────────────────────
+// ── 히어로 카드 (D3DTiltCard + DParticleEffect + DDiamondGridPainter) ─────
 
 class _HeroCard extends StatelessWidget {
   final _QuestDetail quest;
@@ -74,80 +75,100 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return Container(
-      width: double.infinity,
-      height: 200,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(DTokens.r20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.6)!],
+    return D3DTiltCard(
+      maxTiltDeg: 5,
+      child: Container(
+        width: double.infinity,
+        height: 220,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DTokens.r20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.6)!],
+          ),
+          boxShadow: [
+            BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 36, offset: const Offset(0, 14)),
+          ],
         ),
-        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 32, offset: const Offset(0, 12))],
-      ),
-      child: Stack(
-        children: [
-          // 배경 패턴 오버레이
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.15,
-              child: Image.asset(team.patternAsset, fit: BoxFit.cover,
-                  errorBuilder: (e, s, t) => const SizedBox.shrink()),
+        child: Stack(
+          children: [
+            // 다이아몬드 그리드
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DDiamondGridPainter(Colors.white.withValues(alpha: 0.08), step: 36),
+              ),
             ),
-          ),
-          // 야구 아이콘 PNG (우하단)
-          Positioned(
-            right: -16,
-            bottom: -16,
-            child: Image.asset(
-              quest.heroIconAsset,
-              width: 140, height: 140,
-              color: Colors.white.withValues(alpha: 0.12),
-              errorBuilder: (e, s, t) => const SizedBox.shrink(),
+            // 스캔라인
+            Positioned.fill(
+              child: CustomPaint(painter: DScanlinePainter(opacity: 0.015)),
             ),
-          ),
-          // 어두운 비네팅
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.2), Colors.transparent, Colors.black.withValues(alpha: 0.4)],
-                  stops: const [0, 0.5, 1],
+            // 파티클 효과
+            Positioned.fill(
+              child: DParticleEffect(
+                color: Colors.white,
+                accentColor: team.accent,
+                count: 16,
+                active: true,
+              ),
+            ),
+            // 야구 아이콘 PNG (우하단 대형)
+            Positioned(
+              right: -20,
+              bottom: -20,
+              child: Image.asset(
+                quest.heroIconAsset,
+                width: 160, height: 160,
+                color: Colors.white.withValues(alpha: 0.13),
+                errorBuilder: (e, s, t) => const SizedBox.shrink(),
+              ),
+            ),
+            // 어두운 비네팅
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black.withValues(alpha: 0.15), Colors.transparent, Colors.black.withValues(alpha: 0.45)],
+                    stops: const [0, 0.45, 1],
+                  ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(DTokens.s24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(DTokens.rPill),
+            Padding(
+              padding: const EdgeInsets.all(DTokens.s24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(DTokens.rPill),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(quest.typeName, style: DType.label(11, color: Colors.white)),
                   ),
-                  child: Text(quest.typeName, style: DType.label(11, color: Colors.white)),
-                ),
-                const Spacer(),
-                Text(quest.title, style: DType.heading(22, color: Colors.white)),
-                const SizedBox(height: DTokens.s8),
-                Text(quest.subtitle, style: DType.body(16).copyWith(color: Colors.white.withValues(alpha: 0.8), height: 1.45)),
-              ],
+                  const Spacer(),
+                  Text(quest.title, style: DType.heading(22, color: Colors.white)),
+                  const SizedBox(height: DTokens.s8),
+                  Text(
+                    quest.subtitle,
+                    style: DType.body(15).copyWith(color: Colors.white.withValues(alpha: 0.82), height: 1.45),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── 보상 행 (DScoreboard 3개) ─────────────────────────────────────────────
+// ── 보상 행 (DScoreboard 3개 + DShimmerSweep) ────────────────────────────
 
 class _RewardRow extends StatelessWidget {
   final _QuestDetail quest;
@@ -156,41 +177,45 @@ class _RewardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return DGlassPanel(
-      teamBorder: true,
-      padding: const EdgeInsets.symmetric(horizontal: DTokens.s20, vertical: DTokens.s16),
-      child: Row(
-        children: [
-          Expanded(
-            child: DScoreboard(
-              value: '+${quest.reward}',
-              label: 'POINTS',
-              accent: team.primary,
-              valueSize: 28,
-              align: TextAlign.center,
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 3000),
+      highlightOpacity: 0.16,
+      child: DGlassPanel(
+        teamBorder: true,
+        padding: const EdgeInsets.symmetric(horizontal: DTokens.s20, vertical: DTokens.s16),
+        child: Row(
+          children: [
+            Expanded(
+              child: DScoreboard(
+                value: '+${quest.reward}',
+                label: 'POINTS',
+                accent: team.primary,
+                valueSize: 28,
+                align: TextAlign.center,
+              ),
             ),
-          ),
-          Container(width: 1, height: 40, color: DTokens.borderDark),
-          Expanded(
-            child: DScoreboard(
-              value: '+${quest.contribution}',
-              label: '기여도',
-              accent: DTokens.danger,
-              valueSize: 28,
-              align: TextAlign.center,
+            Container(width: 1, height: 40, color: DTokens.borderDark),
+            Expanded(
+              child: DScoreboard(
+                value: '+${quest.contribution}',
+                label: '기여도',
+                accent: DTokens.danger,
+                valueSize: 28,
+                align: TextAlign.center,
+              ),
             ),
-          ),
-          Container(width: 1, height: 40, color: DTokens.borderDark),
-          Expanded(
-            child: DScoreboard(
-              value: '+${quest.exp}',
-              label: 'XP',
-              accent: DTokens.warning,
-              valueSize: 28,
-              align: TextAlign.center,
+            Container(width: 1, height: 40, color: DTokens.borderDark),
+            Expanded(
+              child: DScoreboard(
+                value: '+${quest.exp}',
+                label: 'XP',
+                accent: DTokens.warning,
+                valueSize: 28,
+                align: TextAlign.center,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -220,19 +245,25 @@ class _HowToCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: DTokens.s12),
-          ...quest.conditions.map(
-            (c) => Padding(
+          ...quest.conditions.asMap().entries.map(
+            (e) => Padding(
               padding: const EdgeInsets.only(bottom: DTokens.s8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 6, height: 6,
-                    margin: const EdgeInsets.only(top: 6, right: 10),
-                    decoration: BoxDecoration(color: team.primary, shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.6), blurRadius: 6)]),
+                    width: 20, height: 20,
+                    margin: const EdgeInsets.only(top: 1, right: 10),
+                    decoration: BoxDecoration(
+                      color: team.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: team.primary.withValues(alpha: 0.4)),
+                    ),
+                    child: Center(
+                      child: Text('${e.key + 1}', style: DType.mono(10, color: team.primary, weight: FontWeight.w700)),
+                    ),
                   ),
-                  Expanded(child: Text(c, style: DType.body(14).copyWith(color: DTokens.textPrimaryDark, height: 1.5))),
+                  Expanded(child: Text(e.value, style: DType.body(14).copyWith(color: DTokens.textPrimaryDark, height: 1.5))),
                 ],
               ),
             ),
@@ -255,6 +286,7 @@ class _ProgressCard extends StatelessWidget {
     final progress = quest.total == 0 ? 0.0 : quest.progress / quest.total;
 
     return DGlassPanel(
+      teamBorder: true,
       padding: const EdgeInsets.all(DTokens.s20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +296,7 @@ class _ProgressCard extends StatelessWidget {
               Text('진행 현황', style: DType.label(13, color: DTokens.textSecondaryDark)),
               const Spacer(),
               Text('${quest.progress} / ${quest.total}',
-                  style: DType.scoreboardDigital(20, color: team.primary)),
+                  style: DType.scoreboardDigital(22, color: team.primary)),
             ],
           ),
           const SizedBox(height: DTokens.s12),
@@ -278,7 +310,7 @@ class _ProgressCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [team.primary, team.accent.withValues(alpha: 0.7)]),
                     borderRadius: BorderRadius.circular(DTokens.rPill),
-                    boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.6), blurRadius: 8)],
+                    boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.7), blurRadius: 8)],
                   ),
                 ),
               ),
@@ -286,7 +318,9 @@ class _ProgressCard extends StatelessWidget {
           ),
           const SizedBox(height: DTokens.s8),
           Text(
-            '${quest.total - quest.progress}번 더 수행하면 완료!',
+            quest.total > 1
+                ? '${quest.total - quest.progress}번 더 수행하면 완료!'
+                : '아직 시작하지 않았어요',
             style: DType.body(14).copyWith(color: DTokens.textSecondaryDark),
           ),
         ],
@@ -295,7 +329,7 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-// ── CTA 버튼 ──────────────────────────────────────────────────────────────
+// ── CTA 버튼 (파티클 오버레이) ────────────────────────────────────────────
 
 class _CtaButton extends ConsumerStatefulWidget {
   final _QuestDetail quest;
@@ -307,13 +341,14 @@ class _CtaButton extends ConsumerStatefulWidget {
 
 class _CtaButtonState extends ConsumerState<_CtaButton> {
   bool _loading = false;
+  bool _showParticles = false;
 
   Future<void> _submit() async {
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     ref.read(userProvider.notifier).addPoint(widget.quest.reward);
-    setState(() => _loading = false);
+    setState(() { _loading = false; _showParticles = true; });
     _showComplete();
   }
 
@@ -327,12 +362,24 @@ class _CtaButtonState extends ConsumerState<_CtaButton> {
           borderRadius: BorderRadius.circular(DTokens.r20),
           side: BorderSide(color: team.primary.withValues(alpha: 0.3)),
         ),
-        title: Column(
+        title: Stack(
+          clipBehavior: Clip.none,
           children: [
-            DImpactText(text: '완료!', size: 48, gradient: true)
-                .animate().scale(begin: const Offset(0.5, 0.5), duration: 400.ms, curve: Curves.elasticOut),
-            const SizedBox(height: DTokens.s8),
-            Text('퀘스트 클리어', style: DType.heading(18, color: DTokens.textPrimaryDark)),
+            Positioned.fill(
+              child: DExplosionParticles(
+                color: team.primary,
+                accentColor: team.accent,
+                count: 22,
+              ),
+            ),
+            Column(
+              children: [
+                DImpactText(text: '완료!', size: 56, gradient: true)
+                    .animate().scale(begin: const Offset(0.5, 0.5), duration: 420.ms, curve: Curves.elasticOut),
+                const SizedBox(height: DTokens.s8),
+                Text('퀘스트 클리어', style: DType.heading(18, color: DTokens.textPrimaryDark)),
+              ],
+            ),
           ],
         ),
         content: Column(
@@ -371,11 +418,26 @@ class _CtaButtonState extends ConsumerState<_CtaButton> {
 
   @override
   Widget build(BuildContext context) {
-    return DButton(
-      label: widget.quest.total > 1 ? '진행 상황 업데이트' : '수행 인증',
-      onPressed: _loading ? null : _submit,
-      loading: _loading,
-      icon: Icons.check_rounded,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        if (_showParticles)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DExplosionParticles(
+                color: context.team.primary,
+                accentColor: context.team.accent,
+                count: 18,
+              ),
+            ),
+          ),
+        DButton(
+          label: widget.quest.total > 1 ? '진행 상황 업데이트' : '수행 인증',
+          onPressed: _loading ? null : _submit,
+          loading: _loading,
+          icon: Icons.check_rounded,
+        ),
+      ],
     );
   }
 }

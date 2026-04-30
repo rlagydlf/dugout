@@ -7,6 +7,7 @@ import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../shared/widgets/d_button.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_scoreboard.dart';
 
@@ -57,12 +58,29 @@ class QuizDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<QuizDetailScreen> createState() => _QuizDetailScreenState();
 }
 
-class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
+class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen>
+    with SingleTickerProviderStateMixin {
   int _selected = -1;
   _QuizPhase _phase = _QuizPhase.answering;
   bool _submitting = false;
+  late AnimationController _shakeCtrl;
 
   _QuizDetailData get _quiz => _findQuiz(widget.quizId);
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (_selected < 0) return;
@@ -71,7 +89,11 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     if (!mounted) return;
 
     final isCorrect = _selected == _quiz.answerIndex;
-    if (isCorrect) ref.read(userProvider.notifier).addPoint(_quiz.reward);
+    if (isCorrect) {
+      ref.read(userProvider.notifier).addPoint(_quiz.reward);
+    } else {
+      _shakeCtrl.forward(from: 0);
+    }
 
     setState(() {
       _phase = isCorrect ? _QuizPhase.correct : _QuizPhase.wrong;
@@ -110,17 +132,20 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
           const SizedBox(height: DTokens.s20),
           Padding(
             padding: const EdgeInsets.only(bottom: DTokens.s8),
-            child: Text('정답을 선택하세요', style: DType.label(13, color: DTokens.textSecondaryDark)),
+            child: Text('정답을 선택하세요', style: DType.label(13, color: DTokens.textSecondaryDark, letterSpacing: 1.5)),
           ),
           ...quiz.options.asMap().entries.map((entry) {
             final i   = entry.key;
             final opt = entry.value;
             return Padding(
               padding: const EdgeInsets.only(bottom: DTokens.s8),
-              child: _AnswerOption(
-                index: i, label: opt, isSelected: _selected == i,
-                phase: _QuizPhase.answering, correctIndex: quiz.answerIndex,
+              child: D3DTiltCard(
                 onTap: () => setState(() => _selected = i),
+                child: _AnswerOption(
+                  index: i, label: opt, isSelected: _selected == i,
+                  phase: _QuizPhase.answering, correctIndex: quiz.answerIndex,
+                  onTap: null,
+                ),
               )
                   .animate(delay: Duration(milliseconds: 80 + 60 * i))
                   .fadeIn(duration: 260.ms)
@@ -143,51 +168,79 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
 
   Widget _buildResult(_QuizDetailData quiz) {
     final isCorrect = _phase == _QuizPhase.correct;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s24, DTokens.s16, DTokens.s32),
-      child: Column(
-        children: [
-          _ResultBanner(isCorrect: isCorrect, reward: quiz.reward)
-              .animate()
-              .scale(begin: const Offset(0.85, 0.85), duration: 350.ms, curve: Curves.elasticOut)
-              .fadeIn(duration: 250.ms),
-          const SizedBox(height: DTokens.s20),
-          _ExplanationCard(quiz: quiz, selectedIndex: _selected, isCorrect: isCorrect)
-              .animate(delay: 200.ms).fadeIn(duration: 280.ms),
-          const SizedBox(height: DTokens.s20),
-          ...quiz.options.asMap().entries.map((entry) {
-            final i   = entry.key;
-            final opt = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: DTokens.s8),
-              child: _AnswerOption(
-                index: i, label: opt, isSelected: _selected == i,
-                phase: _phase, correctIndex: quiz.answerIndex, onTap: null,
-              ).animate(delay: Duration(milliseconds: 250 + 50 * i)).fadeIn(duration: 220.ms),
+    return Stack(
+      children: [
+        // 파티클 (정답)
+        if (isCorrect)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DExplosionParticles(
+                color: DTokens.success,
+                accentColor: Colors.white,
+                count: 24,
+              ),
+            ),
+          ),
+        // 오답 흔들림 애니메이션
+        AnimatedBuilder(
+          animation: _shakeCtrl,
+          builder: (context, child) {
+            final shake = !isCorrect
+                ? (4 * (0.5 - (_shakeCtrl.value - 0.5).abs()) * 8).clamp(-8.0, 8.0)
+                : 0.0;
+            return Transform.translate(
+              offset: Offset(shake, 0),
+              child: child,
             );
-          }),
-          const SizedBox(height: DTokens.s24),
-          DButton(
-            label: '목록으로 돌아가기',
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icons.arrow_back_rounded,
-          ).animate(delay: 500.ms).fadeIn(duration: 260.ms),
-          if (!isCorrect) ...[
-            const SizedBox(height: DTokens.s12),
-            DButton(
-              label: '다시 풀기',
-              onPressed: () => setState(() { _selected = -1; _phase = _QuizPhase.answering; }),
-              variant: DButtonVariant.outline,
-              icon: Icons.refresh_rounded,
-            ).animate(delay: 560.ms).fadeIn(duration: 260.ms),
-          ],
-        ],
-      ),
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s24, DTokens.s16, DTokens.s32),
+            child: Column(
+              children: [
+                _ResultBanner(isCorrect: isCorrect, reward: quiz.reward)
+                    .animate()
+                    .scale(begin: const Offset(0.85, 0.85), duration: 350.ms, curve: Curves.elasticOut)
+                    .fadeIn(duration: 250.ms),
+                const SizedBox(height: DTokens.s20),
+                _ExplanationCard(quiz: quiz, selectedIndex: _selected, isCorrect: isCorrect)
+                    .animate(delay: 200.ms).fadeIn(duration: 280.ms),
+                const SizedBox(height: DTokens.s20),
+                ...quiz.options.asMap().entries.map((entry) {
+                  final i   = entry.key;
+                  final opt = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: DTokens.s8),
+                    child: _AnswerOption(
+                      index: i, label: opt, isSelected: _selected == i,
+                      phase: _phase, correctIndex: quiz.answerIndex, onTap: null,
+                    ).animate(delay: Duration(milliseconds: 250 + 50 * i)).fadeIn(duration: 220.ms),
+                  );
+                }),
+                const SizedBox(height: DTokens.s24),
+                DButton(
+                  label: '목록으로 돌아가기',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icons.arrow_back_rounded,
+                ).animate(delay: 500.ms).fadeIn(duration: 260.ms),
+                if (!isCorrect) ...[
+                  const SizedBox(height: DTokens.s12),
+                  DButton(
+                    label: '다시 풀기',
+                    onPressed: () => setState(() { _selected = -1; _phase = _QuizPhase.answering; }),
+                    variant: DButtonVariant.outline,
+                    icon: Icons.refresh_rounded,
+                  ).animate(delay: 560.ms).fadeIn(duration: 260.ms),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ── 문제 카드 ─────────────────────────────────────────────────────────────
+// ── 문제 카드 (D3DTiltCard + DDiamondGridPainter) ─────────────────────────
 
 class _QuestionCard extends StatelessWidget {
   final _QuizDetailData quiz;
@@ -202,69 +255,78 @@ class _QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DTokens.s24),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(DTokens.r20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [team.primary.withValues(alpha: 0.25), team.secondary.withValues(alpha: 0.15)],
+    return D3DTiltCard(
+      maxTiltDeg: 4,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DTokens.s24),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DTokens.r20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [team.primary.withValues(alpha: 0.28), team.secondary.withValues(alpha: 0.18)],
+          ),
+          border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+          boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 8))],
         ),
-        border: Border.all(color: team.primary.withValues(alpha: 0.3)),
-      ),
-      child: Stack(
-        children: [
-          // 배경 야구 PNG 아이콘
-          Positioned(
-            right: -16, bottom: -16,
-            child: Image.asset(
-              _catIconAssets[quiz.category]!,
-              width: 110, height: 110,
-              color: team.primary.withValues(alpha: 0.12),
-              errorBuilder: (e, s, t) => const SizedBox.shrink(),
+        child: Stack(
+          children: [
+            // 다이아몬드 패턴
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DDiamondGridPainter(team.primary.withValues(alpha: 0.10), step: 30),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
-                    decoration: BoxDecoration(
-                      color: team.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(DTokens.rPill),
-                      border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+            // 배경 야구 PNG 아이콘
+            Positioned(
+              right: -16, bottom: -16,
+              child: Image.asset(
+                _catIconAssets[quiz.category]!,
+                width: 120, height: 120,
+                color: team.primary.withValues(alpha: 0.14),
+                errorBuilder: (e, s, t) => const SizedBox.shrink(),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
+                      decoration: BoxDecoration(
+                        color: team.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(DTokens.rPill),
+                        border: Border.all(color: team.primary.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(quiz.categoryName, style: DType.label(11, color: team.primary)),
                     ),
-                    child: Text(quiz.categoryName, style: DType.label(11, color: team.primary)),
-                  ),
-                  const Spacer(),
-                  Image.asset('assets/images/icons/scoreboard.png', width: 14, height: 14,
-                      color: DTokens.textSecondaryDark,
-                      errorBuilder: (e, s, t) => const Icon(Icons.timer_outlined, size: 14, color: DTokens.textSecondaryDark)),
-                  const SizedBox(width: 4),
-                  Text('${quiz.timeLimitSecs}초', style: DType.mono(13, color: DTokens.textSecondaryDark)),
-                ],
-              ),
-              const SizedBox(height: DTokens.s16),
-              Text('Q.', style: DType.impact(28, color: team.primary)),
-              const SizedBox(height: DTokens.s8),
-              Text(quiz.question, style: DType.heading(18, color: DTokens.textPrimaryDark)),
-              const SizedBox(height: DTokens.s16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
-                decoration: BoxDecoration(
-                  color: DTokens.warning.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(DTokens.rPill),
+                    const Spacer(),
+                    Icon(Icons.timer_outlined, size: 14, color: DTokens.textSecondaryDark),
+                    const SizedBox(width: 4),
+                    Text('${quiz.timeLimitSecs}초', style: DType.mono(13, color: DTokens.textSecondaryDark)),
+                  ],
                 ),
-                child: Text('정답 시 +${quiz.reward} P 지급', style: DType.mono(12, color: DTokens.warning)),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: DTokens.s16),
+                Text('Q.', style: DType.impact(32, color: team.primary)),
+                const SizedBox(height: DTokens.s8),
+                Text(quiz.question, style: DType.heading(18, color: DTokens.textPrimaryDark)),
+                const SizedBox(height: DTokens.s16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: DTokens.s8, vertical: DTokens.s4),
+                  decoration: BoxDecoration(
+                    color: DTokens.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(DTokens.rPill),
+                    border: Border.all(color: DTokens.warning.withValues(alpha: 0.3)),
+                  ),
+                  child: Text('정답 시 +${quiz.reward} P 지급', style: DType.mono(12, color: DTokens.warning)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -293,15 +355,18 @@ class _AnswerOption extends StatelessWidget {
     final isAnswering = phase == _QuizPhase.answering;
 
     Color borderColor;
+    Color bgColor;
     Color textColor;
     Widget? trailingIcon;
 
     if (isAnswering) {
       if (isSelected) {
         borderColor = team.primary;
+        bgColor     = team.primary.withValues(alpha: 0.12);
         textColor   = team.primary;
       } else {
         borderColor = DTokens.borderDark;
+        bgColor     = DTokens.surfaceDark;
         textColor   = DTokens.textPrimaryDark;
       }
     } else {
@@ -309,42 +374,62 @@ class _AnswerOption extends StatelessWidget {
       final isWrongSelected = isSelected && !isCorrect;
       if (isCorrect) {
         borderColor  = DTokens.success;
+        bgColor      = DTokens.success.withValues(alpha: 0.10);
         textColor    = DTokens.success;
         trailingIcon = const Icon(Icons.check_circle_rounded, color: DTokens.success, size: 20);
       } else if (isWrongSelected) {
         borderColor  = DTokens.danger;
+        bgColor      = DTokens.danger.withValues(alpha: 0.10);
         textColor    = DTokens.danger;
         trailingIcon = const Icon(Icons.cancel_rounded, color: DTokens.danger, size: 20);
       } else {
         borderColor = DTokens.borderDark;
+        bgColor     = DTokens.surfaceDark;
         textColor   = DTokens.textTertiaryDark;
       }
     }
 
-    return DGlassPanel(
-      onTap: onTap,
-      padding: const EdgeInsets.all(DTokens.s16),
-      child: Row(
-        children: [
-          Container(
-            width: 28, height: 28,
-            decoration: BoxDecoration(color: borderColor.withValues(alpha: 0.18), shape: BoxShape.circle,
-                border: isSelected && isAnswering ? Border.all(color: borderColor, width: 2) : null),
-            child: Center(child: Text(_numbers[index], style: DType.badge(14, color: textColor))),
-          ),
-          const SizedBox(width: DTokens.s12),
-          Expanded(child: Text(label, style: DType.body(15, FontWeight.w600).copyWith(color: textColor, height: 1.4))),
-          if (trailingIcon != null) ...[
-            const SizedBox(width: DTokens.s8),
-            trailingIcon,
+    return GestureDetector(
+      onTap: isAnswering ? onTap : null,
+      child: AnimatedContainer(
+        duration: 180.ms,
+        padding: const EdgeInsets.all(DTokens.s16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(DTokens.r16),
+          border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
+          boxShadow: isSelected && isAnswering
+              ? [BoxShadow(color: team.primary.withValues(alpha: 0.25), blurRadius: 10)]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                color: borderColor.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: isSelected && isAnswering ? Border.all(color: borderColor, width: 2) : null,
+              ),
+              child: Center(
+                child: Text(_numbers[index],
+                    style: DType.label(14, color: textColor, weight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(width: DTokens.s12),
+            Expanded(child: Text(label, style: DType.body(15, FontWeight.w600).copyWith(color: textColor, height: 1.4))),
+            if (trailingIcon != null) ...[
+              const SizedBox(width: DTokens.s8),
+              trailingIcon,
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-// ── 결과 배너 ─────────────────────────────────────────────────────────────
+// ── 결과 배너 (DExplosionParticles + DImpactText) ─────────────────────────
 
 class _ResultBanner extends StatelessWidget {
   final bool isCorrect;
@@ -356,23 +441,52 @@ class _ResultBanner extends StatelessWidget {
     final team  = context.team;
     final color = isCorrect ? DTokens.success : DTokens.danger;
 
-    return DGlassPanel(
-      padding: const EdgeInsets.all(DTokens.s24),
-      child: Column(
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(DTokens.r20),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 24, offset: const Offset(0, 8))],
+      ),
+      child: Stack(
         children: [
-          // 큰 DImpactText 결과 표시
-          DImpactText(
-            text: isCorrect ? '정답!' : '오답',
-            size: 64,
-            color: color,
-            gradient: isCorrect,
-          ).animate().scale(begin: const Offset(0.6, 0.6), duration: 450.ms, curve: Curves.elasticOut),
-          const SizedBox(height: DTokens.s16),
-          if (isCorrect) ...[
-            DScoreboard(value: '+$reward', label: 'POINTS EARNED', accent: team.primary, valueSize: 36, align: TextAlign.center),
-          ] else ...[
-            Text('다시 도전해보세요!', style: DType.body(14).copyWith(color: DTokens.textSecondaryDark)),
-          ],
+          // 파티클 배경
+          if (isCorrect)
+            Positioned.fill(
+              child: DParticleEffect(
+                color: DTokens.success,
+                accentColor: team.primary,
+                count: 18,
+                active: true,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(DTokens.s24),
+            child: Column(
+              children: [
+                // 영문 임팩트 텍스트 — DImpactText (영문만)
+                DImpactText(
+                  text: isCorrect ? 'CORRECT!' : 'WRONG',
+                  size: 60,
+                  color: color,
+                  gradient: isCorrect,
+                ).animate().scale(begin: const Offset(0.6, 0.6), duration: 450.ms, curve: Curves.elasticOut),
+                const SizedBox(height: DTokens.s8),
+                // 한글 결과 텍스트
+                Text(
+                  isCorrect ? '정답입니다!' : '오답입니다',
+                  style: DType.heading(20, color: color),
+                ),
+                const SizedBox(height: DTokens.s16),
+                if (isCorrect)
+                  DScoreboard(value: '+$reward', label: 'POINTS EARNED', accent: team.primary, valueSize: 36, align: TextAlign.center)
+                else
+                  Text('다시 도전해보세요!', style: DType.body(14).copyWith(color: DTokens.textSecondaryDark)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -408,12 +522,13 @@ class _ExplanationCard extends StatelessWidget {
                   color: DTokens.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(DTokens.rPill),
                 ),
-                child: Text('정답: ${quiz.options[quiz.answerIndex]}', style: DType.label(11, color: DTokens.success)),
+                child: Text('정답: ${quiz.options[quiz.answerIndex]}',
+                    style: DType.label(11, color: DTokens.success)),
               ),
             ],
           ),
           const SizedBox(height: DTokens.s12),
-          Text(quiz.explanation, style: DType.body(16).copyWith(color: DTokens.textPrimaryDark, height: 1.6)),
+          Text(quiz.explanation, style: DType.body(14).copyWith(color: DTokens.textPrimaryDark, height: 1.6)),
         ],
       ),
     );

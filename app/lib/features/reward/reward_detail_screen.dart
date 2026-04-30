@@ -6,6 +6,7 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_glass_panel.dart';
 import '../../shared/widgets/d_scoreboard.dart';
 
@@ -97,6 +98,7 @@ class RewardDetailScreen extends ConsumerStatefulWidget {
 
 class _RewardDetailScreenState extends ConsumerState<RewardDetailScreen> {
   bool _loading = false;
+  bool _showParticles = false;
 
   RewardItem get _item => widget.item ?? _defaultItem;
 
@@ -114,12 +116,13 @@ class _RewardDetailScreenState extends ConsumerState<RewardDetailScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     ref.read(userProvider.notifier).addPoint(-_item.price);
     if (!mounted) return;
-    setState(() => _loading = false);
+    setState(() { _loading = false; _showParticles = true; });
 
     await showDialog<void>(
       context: context,
       builder: (_) => _CouponDialog(item: _item),
     );
+    if (mounted) setState(() => _showParticles = false);
   }
 
   @override
@@ -142,94 +145,108 @@ class _RewardDetailScreenState extends ConsumerState<RewardDetailScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── 히어로 영역
-                  _HeroPanel(item: _item),
-
-                  // ── 상품명 + 가격
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(DTokens.s20, DTokens.s24, DTokens.s20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _item.name,
-                          style: DType.heading(24, color: Colors.white),
-                        ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.08),
-
-                        const SizedBox(height: DTokens.s16),
-
-                        // 가격 + 잔여 포인트
-                        DGlassPanel(
-                          teamBorder: true,
-                          padding: const EdgeInsets.all(DTokens.s16),
-                          radius: DTokens.r16,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: DScoreboard(
-                                  value: '${_fmt(_item.price)} P',
-                                  label: '교환 포인트',
-                                  accent: canBuy ? team.primary : DTokens.textTertiaryDark,
-                                  valueSize: 28,
-                                ),
-                              ),
-                              Container(width: 1, height: 44, color: DTokens.borderDark),
-                              Expanded(
-                                child: DScoreboard(
-                                  value: '${_fmt(user.point)} P',
-                                  label: '보유 포인트',
-                                  accent: team.primary,
-                                  valueSize: 22,
-                                  align: TextAlign.center,
-                                ),
-                              ),
-                              if (!canBuy) ...[
-                                Container(width: 1, height: 44, color: DTokens.borderDark),
-                                Expanded(
-                                  child: DScoreboard(
-                                    value: '${_fmt(_item.price - user.point)} P',
-                                    label: '부족',
-                                    accent: DTokens.danger,
-                                    valueSize: 20,
-                                    align: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ).animate(delay: 150.ms).fadeIn().slideY(begin: 0.06),
-
-                        const SizedBox(height: DTokens.s20),
-
-                        // 상세 메타
-                        _MetaPanel(item: _item),
-
-                        const SizedBox(height: DTokens.s16),
-
-                        // 유의사항
-                        _NoticePanel(notice: _item.notice),
-
-                        const SizedBox(height: DTokens.s24),
-                      ],
-                    ),
-                  ),
-                ],
+          // 파티클 오버레이 (교환 완료)
+          if (_showParticles)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DExplosionParticles(
+                  color: team.primary,
+                  accentColor: team.accent,
+                  count: 24,
+                ),
               ),
             ),
-          ),
+          Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── 히어로 영역 (D3DTiltCard + DShimmerSweep)
+                      _HeroPanel(item: _item),
 
-          // ── 교환 버튼
-          _ExchangeBar(
-            canBuy: canBuy,
-            loading: _loading,
-            onPressed: canBuy ? _onExchange : null,
+                      // ── 상품명 + 가격
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(DTokens.s20, DTokens.s24, DTokens.s20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _item.name,
+                              style: DType.heading(24, color: Colors.white),
+                            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.08),
+
+                            const SizedBox(height: DTokens.s16),
+
+                            // 가격 + 잔여 포인트 (DShimmerSweep)
+                            DShimmerSweep(
+                              period: const Duration(milliseconds: 2600),
+                              highlightOpacity: 0.16,
+                              child: DGlassPanel(
+                                teamBorder: true,
+                                padding: const EdgeInsets.all(DTokens.s16),
+                                radius: DTokens.r16,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: DScoreboard(
+                                        value: '${_fmt(_item.price)} P',
+                                        label: '교환 포인트',
+                                        accent: canBuy ? team.primary : DTokens.textTertiaryDark,
+                                        valueSize: 28,
+                                      ),
+                                    ),
+                                    Container(width: 1, height: 44, color: DTokens.borderDark),
+                                    Expanded(
+                                      child: DScoreboard(
+                                        value: '${_fmt(user.point)} P',
+                                        label: '보유 포인트',
+                                        accent: team.primary,
+                                        valueSize: 22,
+                                        align: TextAlign.center,
+                                      ),
+                                    ),
+                                    if (!canBuy) ...[
+                                      Container(width: 1, height: 44, color: DTokens.borderDark),
+                                      Expanded(
+                                        child: DScoreboard(
+                                          value: '${_fmt(_item.price - user.point)} P',
+                                          label: '부족',
+                                          accent: DTokens.danger,
+                                          valueSize: 20,
+                                          align: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ).animate(delay: 150.ms).fadeIn().slideY(begin: 0.06),
+
+                            const SizedBox(height: DTokens.s20),
+
+                            _MetaPanel(item: _item),
+                            const SizedBox(height: DTokens.s16),
+                            _NoticePanel(notice: _item.notice),
+                            const SizedBox(height: DTokens.s24),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── 교환 버튼
+              _ExchangeBar(
+                canBuy: canBuy,
+                loading: _loading,
+                onPressed: canBuy ? _onExchange : null,
+              ),
+            ],
           ),
         ],
       ),
@@ -237,7 +254,7 @@ class _RewardDetailScreenState extends ConsumerState<RewardDetailScreen> {
   }
 }
 
-// ── hero panel ────────────────────────────────────────────────────────────────
+// ── hero panel (D3DTiltCard + DShimmerSweep + DParticleEffect ambient) ────────
 
 class _HeroPanel extends StatelessWidget {
   final RewardItem item;
@@ -246,100 +263,114 @@ class _HeroPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return SizedBox(
-      height: 260,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 그라데이션 배경
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  team.primary.withValues(alpha: 0.28),
-                  team.secondary.withValues(alpha: 0.16),
-                  DTokens.bgDark,
-                ],
-                stops: const [0, 0.5, 1],
-              ),
-            ),
-          ),
-          // 글로우 오버레이
-          Center(
-            child: Container(
-              width: 200,
-              height: 200,
+    return D3DTiltCard(
+      maxTiltDeg: 4,
+      child: SizedBox(
+        height: 280,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 그라데이션 배경
+            Container(
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    team.primary.withValues(alpha: 0.15),
-                    Colors.transparent,
+                    team.primary.withValues(alpha: 0.32),
+                    team.secondary.withValues(alpha: 0.18),
+                    DTokens.bgDark,
                   ],
+                  stops: const [0, 0.5, 1],
                 ),
               ),
             ),
-          ),
-          // 아이콘
-          Center(
-            child: Image.asset(
-              _categoryIcon(item.category),
-              width: 110,
-              height: 110,
-              color: team.primary,
-              colorBlendMode: BlendMode.srcIn,
-              errorBuilder: (e, s, t) => Icon(
-                _categoryFallback(item.category),
-                size: 110,
-                color: team.primary,
+            // 다이아몬드 그리드
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DDiamondGridPainter(team.primary.withValues(alpha: 0.08), step: 32),
               ),
-            )
-                .animate()
-                .scale(
-                  begin: const Offset(0.65, 0.65),
-                  curve: Curves.elasticOut,
-                  duration: 700.ms,
-                )
-                .fadeIn(),
-          ),
-          // 카테고리 배지 (좌하단)
-          Positioned(
-            bottom: DTokens.s20,
-            left: DTokens.s20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: DTokens.s12, vertical: 6),
-              decoration: BoxDecoration(
+            ),
+            // 스캔라인
+            Positioned.fill(
+              child: CustomPaint(painter: DScanlinePainter(opacity: 0.012)),
+            ),
+            // 앰비언트 파티클
+            Positioned.fill(
+              child: DParticleEffect(
                 color: team.primary,
-                borderRadius: BorderRadius.circular(DTokens.rPill),
-                boxShadow: [
-                  BoxShadow(
-                    color: team.primary.withValues(alpha: 0.5),
-                    blurRadius: 12,
+                accentColor: team.accent,
+                count: 12,
+                active: true,
+              ),
+            ),
+            // 글로우 오버레이
+            Center(
+              child: Container(
+                width: 220, height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [team.primary.withValues(alpha: 0.18), Colors.transparent],
                   ),
-                ],
+                ),
               ),
-              child: Text(item.category, style: DType.badge(12, color: Colors.white)),
-            ).animate(delay: 200.ms).fadeIn().slideX(begin: -0.1),
-          ),
-          // 재고 배지 (우상단)
-          if (item.stock != null)
+            ),
+            // DShimmerSweep
+            Positioned.fill(
+              child: DShimmerSweep(
+                period: const Duration(milliseconds: 3000),
+                highlightOpacity: 0.10,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            // 아이콘
+            Center(
+              child: Image.asset(
+                _categoryIcon(item.category),
+                width: 120, height: 120,
+                color: team.primary,
+                colorBlendMode: BlendMode.srcIn,
+                errorBuilder: (e, s, t) => Icon(
+                  _categoryFallback(item.category),
+                  size: 110, color: team.primary,
+                ),
+              )
+                  .animate()
+                  .scale(begin: const Offset(0.65, 0.65), curve: Curves.elasticOut, duration: 700.ms)
+                  .fadeIn(),
+            ),
+            // 카테고리 배지 (좌하단)
             Positioned(
-              top: DTokens.s20,
-              right: DTokens.s20,
+              bottom: DTokens.s20, left: DTokens.s20,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: DTokens.s12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: DTokens.danger,
+                  gradient: LinearGradient(colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.5)!]),
                   borderRadius: BorderRadius.circular(DTokens.rPill),
+                  boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.6), blurRadius: 14)],
                 ),
-                child: Text('잔여 ${item.stock}개', style: DType.badge(11, color: Colors.white)),
-              )
-                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                  .fade(begin: 0.7, end: 1.0, duration: 800.ms),
+                child: Text(item.category, style: DType.badge(12, color: Colors.white)),
+              ).animate(delay: 200.ms).fadeIn().slideX(begin: -0.1),
             ),
-        ],
+            // 재고 배지 (우상단)
+            if (item.stock != null)
+              Positioned(
+                top: DTokens.s20, right: DTokens.s20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: DTokens.s12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: DTokens.danger,
+                    borderRadius: BorderRadius.circular(DTokens.rPill),
+                    boxShadow: [BoxShadow(color: DTokens.danger.withValues(alpha: 0.5), blurRadius: 10)],
+                  ),
+                  child: Text('잔여 ${item.stock}개', style: DType.label(11, color: Colors.white)),
+                )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .fade(begin: 0.7, end: 1.0, duration: 800.ms),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -359,7 +390,6 @@ class _MetaPanel extends StatelessWidget {
       child: Column(
         children: [
           _MetaRow(
-            iconAsset: 'assets/images/icons/scoreboard.png',
             fallback: Icons.calendar_today_rounded,
             label: '유효기간',
             value: item.validUntil,
@@ -368,7 +398,6 @@ class _MetaPanel extends StatelessWidget {
           if (item.stock != null) ...[
             const Divider(color: DTokens.borderDark, height: DTokens.s20),
             _MetaRow(
-              iconAsset: 'assets/images/icons/bolt.png',
               fallback: Icons.inventory_2_rounded,
               label: '잔여 수량',
               value: '${item.stock}개',
@@ -382,13 +411,11 @@ class _MetaPanel extends StatelessWidget {
 }
 
 class _MetaRow extends StatelessWidget {
-  final String iconAsset;
   final IconData fallback;
   final String label;
   final String value;
   final Color valueColor;
   const _MetaRow({
-    required this.iconAsset,
     required this.fallback,
     required this.label,
     required this.value,
@@ -399,17 +426,11 @@ class _MetaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Image.asset(
-          iconAsset,
-          width: 14,
-          height: 14,
-          errorBuilder: (e, s, t) =>
-              Icon(fallback, size: 14, color: DTokens.textTertiaryDark),
-        ),
+        Icon(fallback, size: 14, color: DTokens.textTertiaryDark),
         const SizedBox(width: DTokens.s8),
         SizedBox(
           width: 72,
-          child: Text(label, style: DType.body(15).copyWith(color: DTokens.textSecondaryDark)),
+          child: Text(label, style: DType.caption(13, color: DTokens.textSecondaryDark)),
         ),
         Expanded(
           child: Text(value, style: DType.mono(13, color: valueColor, weight: FontWeight.w700)),
@@ -435,13 +456,7 @@ class _NoticePanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset(
-                'assets/images/icons/megaphone.png',
-                width: 14,
-                height: 14,
-                errorBuilder: (e, s, t) =>
-                    Icon(Icons.info_outline_rounded, size: 14, color: DTokens.warning),
-              ),
+              const Icon(Icons.info_outline_rounded, size: 14, color: DTokens.warning),
               const SizedBox(width: DTokens.s8),
               Text('유의사항', style: DType.heading(13, color: DTokens.textPrimaryDark)),
             ],
@@ -449,10 +464,7 @@ class _NoticePanel extends StatelessWidget {
           const SizedBox(height: DTokens.s12),
           Text(
             notice,
-            style: DType.body(14).copyWith(
-              color: DTokens.textSecondaryDark,
-              height: 1.7,
-            ),
+            style: DType.body(13).copyWith(color: DTokens.textSecondaryDark, height: 1.7),
           ),
         ],
       ),
@@ -460,7 +472,7 @@ class _NoticePanel extends StatelessWidget {
   }
 }
 
-// ── exchange bar ──────────────────────────────────────────────────────────────
+// ── exchange bar (파티클 효과) ────────────────────────────────────────────────
 
 class _ExchangeBar extends StatelessWidget {
   final bool canBuy;
@@ -503,45 +515,27 @@ class _ExchangeBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(DTokens.r20),
             border: canBuy ? null : Border.all(color: DTokens.borderDark),
             boxShadow: canBuy
-                ? [
-                    BoxShadow(
-                      color: team.primary.withValues(alpha: 0.5),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
+                ? [BoxShadow(color: team.primary.withValues(alpha: 0.55), blurRadius: 22, offset: const Offset(0, 4))]
                 : null,
           ),
           child: Center(
             child: loading
                 ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                    width: 24, height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset(
-                        'assets/images/icons/trophy.png',
-                        width: 20,
-                        height: 20,
+                      Icon(
+                        canBuy ? Icons.swap_horiz_rounded : Icons.lock_rounded,
+                        size: 22,
                         color: canBuy ? Colors.white : DTokens.textTertiaryDark,
-                        colorBlendMode: BlendMode.srcIn,
-                        errorBuilder: (e, s, t) => Icon(
-                          canBuy ? Icons.swap_horiz_rounded : Icons.lock_rounded,
-                          size: 20,
-                          color: canBuy ? Colors.white : DTokens.textTertiaryDark,
-                        ),
                       ),
                       const SizedBox(width: DTokens.s12),
                       Text(
                         canBuy ? '교환하기' : '포인트 부족',
-                        style: DType.heading(18,
-                            color: canBuy ? Colors.white : DTokens.textTertiaryDark)
+                        style: DType.heading(18, color: canBuy ? Colors.white : DTokens.textTertiaryDark)
                             .copyWith(letterSpacing: 1),
                       ),
                     ],
@@ -601,18 +595,12 @@ class _ConfirmDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '포인트 교환',
-                style: DType.heading(18, color: Colors.white),
-              ),
+              Text('포인트 교환', style: DType.heading(18, color: Colors.white)),
               const SizedBox(height: DTokens.s16),
               Text(
                 '${_fmt(item.price)} P를 사용하여\n${item.name}(을)를 교환하시겠습니까?',
                 textAlign: TextAlign.center,
-                style: DType.body(14).copyWith(
-                  color: DTokens.textSecondaryDark,
-                  height: 1.6,
-                ),
+                style: DType.body(14).copyWith(color: DTokens.textSecondaryDark, height: 1.6),
               ),
               const SizedBox(height: DTokens.s24),
               Row(
@@ -627,9 +615,7 @@ class _ConfirmDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(DTokens.r12),
                           border: Border.all(color: DTokens.borderDark),
                         ),
-                        child: Center(
-                          child: Text('취소', style: DType.label(14, color: DTokens.textSecondaryDark)),
-                        ),
+                        child: Center(child: Text('취소', style: DType.label(14, color: DTokens.textSecondaryDark))),
                       ),
                     ),
                   ),
@@ -644,16 +630,9 @@ class _ConfirmDialog extends StatelessWidget {
                             colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.6)!],
                           ),
                           borderRadius: BorderRadius.circular(DTokens.r12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: team.primary.withValues(alpha: 0.4),
-                              blurRadius: 12,
-                            ),
-                          ],
+                          boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 12)],
                         ),
-                        child: Center(
-                          child: Text('교환하기', style: DType.label(14, color: Colors.white)),
-                        ),
+                        child: Center(child: Text('교환하기', style: DType.label(14, color: Colors.white))),
                       ),
                     ),
                   ),
@@ -667,7 +646,7 @@ class _ConfirmDialog extends StatelessWidget {
   }
 }
 
-// ── coupon dialog ─────────────────────────────────────────────────────────────
+// ── coupon dialog (DExplosionParticles) ───────────────────────────────────────
 
 class _CouponDialog extends StatelessWidget {
   final RewardItem item;
@@ -688,52 +667,74 @@ class _CouponDialog extends StatelessWidget {
         child: Container(
           color: DTokens.surfaceDark,
           padding: const EdgeInsets.all(DTokens.s24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Icon(Icons.check_circle_rounded, size: 52, color: team.primary),
-              const SizedBox(height: DTokens.s16),
-              Text(
-                '교환 완료!',
-                style: DType.heading(20, color: Colors.white),
-              ),
-              const SizedBox(height: DTokens.s8),
-              Text(
-                item.name,
-                textAlign: TextAlign.center,
-                style: DType.body(14).copyWith(color: DTokens.textSecondaryDark),
-              ),
-              const SizedBox(height: DTokens.s20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: DTokens.s12, horizontal: DTokens.s16),
-                decoration: BoxDecoration(
-                  color: DTokens.bgDark,
-                  borderRadius: BorderRadius.circular(DTokens.r12),
-                  border: Border.all(color: team.primary.withValues(alpha: 0.4)),
-                ),
-                child: Text(
-                  _code,
-                  textAlign: TextAlign.center,
-                  style: DType.mono(16, color: team.primary, weight: FontWeight.w700),
+              // 폭발 파티클
+              Positioned.fill(
+                child: DExplosionParticles(
+                  color: team.primary,
+                  accentColor: team.accent,
+                  count: 20,
                 ),
               ),
-              const SizedBox(height: DTokens.s24),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.6)!],
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60, height: 60,
+                    decoration: BoxDecoration(
+                      color: team.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: team.primary.withValues(alpha: 0.4)),
                     ),
-                    borderRadius: BorderRadius.circular(DTokens.r12),
+                    child: Center(
+                      child: Icon(Icons.check_rounded, size: 32, color: team.primary),
+                    ),
+                  ).animate().scale(begin: const Offset(0.5, 0.5), duration: 400.ms, curve: Curves.elasticOut),
+                  const SizedBox(height: DTokens.s16),
+                  Text('교환 완료!', style: DType.heading(22, color: Colors.white)),
+                  const SizedBox(height: DTokens.s8),
+                  Text(item.name, textAlign: TextAlign.center,
+                      style: DType.body(14).copyWith(color: DTokens.textSecondaryDark)),
+                  const SizedBox(height: DTokens.s20),
+                  // 쿠폰 코드 박스
+                  DShimmerSweep(
+                    period: const Duration(milliseconds: 2000),
+                    highlightOpacity: 0.20,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: DTokens.s14, horizontal: DTokens.s16),
+                      decoration: BoxDecoration(
+                        color: DTokens.bgDark,
+                        borderRadius: BorderRadius.circular(DTokens.r12),
+                        border: Border.all(color: team.primary.withValues(alpha: 0.5)),
+                        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.25), blurRadius: 12)],
+                      ),
+                      child: Text(
+                        _code,
+                        textAlign: TextAlign.center,
+                        style: DType.mono(18, color: team.primary, weight: FontWeight.w700),
+                      ),
+                    ),
                   ),
-                  child: Center(
-                    child: Text('확인', style: DType.label(14, color: Colors.white)),
+                  const SizedBox(height: DTokens.s24),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.6)!],
+                        ),
+                        borderRadius: BorderRadius.circular(DTokens.r12),
+                        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.45), blurRadius: 14)],
+                      ),
+                      child: Center(child: Text('확인', style: DType.label(15, color: Colors.white))),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

@@ -9,6 +9,7 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
+import '../../shared/widgets/d_effects.dart';
 import '../../shared/widgets/d_scoreboard.dart';
 
 // ── phase enum ────────────────────────────────────────────────────────────────
@@ -35,7 +36,9 @@ class _SortieModalState extends ConsumerState<SortieModal>
   late final AnimationController _ripple3Ctrl;
   late final AnimationController _floatCtrl;
   late final AnimationController _scanCtrl;
-  late final AnimationController _sparkleCtrl;
+  // Phase 3: 24개 파티클 (별 + 번개) — explode + complete
+  late final AnimationController _particleCtrl;
+  late final AnimationController _shimmerCtrl;
 
   @override
   void initState() {
@@ -50,14 +53,10 @@ class _SortieModalState extends ConsumerState<SortieModal>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
-    // 2nd ripple — slightly delayed, larger spread
     _ripple2Ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     );
-
-    // 3rd ripple — slowest, widest
     _ripple3Ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -73,24 +72,32 @@ class _SortieModalState extends ConsumerState<SortieModal>
       duration: const Duration(milliseconds: 1600),
     )..repeat();
 
-    _sparkleCtrl = AnimationController(
+    _particleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
+    );
+
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
     );
 
     _runSequence();
   }
 
   Future<void> _runSequence() async {
+    // charging: 3 light haptics
     for (int i = 0; i < 3; i++) {
       await Future.delayed(const Duration(milliseconds: 380));
       if (!mounted) return;
       await HapticFeedback.lightImpact();
     }
     if (!mounted) return;
+
+    // → explode
     setState(() => _phase = _SortiePhase.explode);
     _pulseCtrl.stop();
-    // stagger the 3 ripple waves
+    // stagger 3 ripple waves
     _rippleCtrl.forward(from: 0);
     await Future.delayed(const Duration(milliseconds: 160));
     if (!mounted) return;
@@ -98,15 +105,24 @@ class _SortieModalState extends ConsumerState<SortieModal>
     await Future.delayed(const Duration(milliseconds: 160));
     if (!mounted) return;
     _ripple3Ctrl.forward(from: 0);
+    // medium haptic at peak
+    await HapticFeedback.mediumImpact();
+    // Phase 3: 24-particle explosion
+    _particleCtrl.forward(from: 0);
+    await Future.delayed(const Duration(milliseconds: 100));
     await HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(milliseconds: 700));
+
+    await Future.delayed(const Duration(milliseconds: 650));
     if (!mounted) return;
+
+    // → complete
     setState(() {
       _phase = _SortiePhase.complete;
       _pointVisible = true;
     });
     _floatCtrl.repeat(reverse: true);
-    _sparkleCtrl.repeat();
+    _particleCtrl.repeat(); // continue sparkle in complete
+    _shimmerCtrl.repeat();
     await HapticFeedback.lightImpact();
   }
 
@@ -125,7 +141,8 @@ class _SortieModalState extends ConsumerState<SortieModal>
     _ripple3Ctrl.dispose();
     _floatCtrl.dispose();
     _scanCtrl.dispose();
-    _sparkleCtrl.dispose();
+    _particleCtrl.dispose();
+    _shimmerCtrl.dispose();
     super.dispose();
   }
 
@@ -139,8 +156,17 @@ class _SortieModalState extends ConsumerState<SortieModal>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── radial glow
+          // ── radial glow (phase에 따라 강도 변화)
           _GlowBackground(team: team, phase: _phase),
+
+          // ── 다이아몬드 배경
+          Positioned.fill(
+            child: CustomPaint(
+              painter: DDiamondGridPainter(
+                team.primary.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
 
           // ── CRT 스캔라인
           AnimatedBuilder(
@@ -150,15 +176,7 @@ class _SortieModalState extends ConsumerState<SortieModal>
             ),
           ),
 
-          // ── 다이아몬드 배경
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _DiamondPainter(
-                  team.primary.withValues(alpha: 0.04)),
-            ),
-          ),
-
-          // ── 충격파 ripple #1 (원본)
+          // ── 충격파 ripple #1
           if (_phase == _SortiePhase.explode)
             _ShockwaveRipple(
               color: team.primary,
@@ -166,8 +184,7 @@ class _SortieModalState extends ConsumerState<SortieModal>
               center: Offset(size.width / 2, size.height / 2),
               scale: 1.0,
             ),
-
-          // ── 충격파 ripple #2 — wider, secondary color
+          // ── 충격파 ripple #2 — wider, secondary
           if (_phase == _SortiePhase.explode)
             _ShockwaveRipple(
               color: team.secondary,
@@ -175,7 +192,6 @@ class _SortieModalState extends ConsumerState<SortieModal>
               center: Offset(size.width / 2, size.height / 2),
               scale: 1.15,
             ),
-
           // ── 충격파 ripple #3 — widest, accent tint
           if (_phase == _SortiePhase.explode)
             _ShockwaveRipple(
@@ -185,14 +201,15 @@ class _SortieModalState extends ConsumerState<SortieModal>
               scale: 1.3,
             ),
 
-          // ── 별 스파클 (complete phase)
-          if (_phase == _SortiePhase.complete)
+          // ── Phase 3: 24개 파티클 폭발 (별 + 번개, explode & complete)
+          if (_phase == _SortiePhase.explode ||
+              _phase == _SortiePhase.complete)
             Positioned.fill(
               child: AnimatedBuilder(
-                animation: _sparkleCtrl,
+                animation: _particleCtrl,
                 builder: (context, _) => CustomPaint(
-                  painter: _SparklePainter(
-                    progress: _sparkleCtrl.value,
+                  painter: _SortieParticlePainter(
+                    progress: _particleCtrl.value,
                     color: team.primary,
                     accentColor: team.accent,
                     size: size,
@@ -211,8 +228,7 @@ class _SortieModalState extends ConsumerState<SortieModal>
               child: IconButton(
                 icon: const Icon(Icons.close_rounded,
                     color: Colors.white54, size: 26),
-                onPressed:
-                    _phase == _SortiePhase.complete ? _close : null,
+                onPressed: _phase == _SortiePhase.complete ? _close : null,
               ),
             ),
           ),
@@ -229,6 +245,7 @@ class _SortieModalState extends ConsumerState<SortieModal>
                   team: team,
                   pointVisible: _pointVisible,
                   floatCtrl: _floatCtrl,
+                  shimmerCtrl: _shimmerCtrl,
                 ),
             },
           ),
@@ -259,10 +276,9 @@ class _GlowBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final intensity = switch (phase) {
       _SortiePhase.charging => 0.22,
-      _SortiePhase.explode => 0.85,
+      _SortiePhase.explode  => 0.85,
       _SortiePhase.complete => 0.45,
     };
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
@@ -326,13 +342,13 @@ class _RipplePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final maxRadius =
+    final maxR =
         math.sqrt(center.dx * center.dx + center.dy * center.dy) * 1.6 * scale;
     for (int i = 0; i < 4; i++) {
       final delay = i * 0.18;
       final t = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
       if (t <= 0) continue;
-      final radius = maxRadius * Curves.easeOutCubic.transform(t);
+      final radius = maxR * Curves.easeOutCubic.transform(t);
       final opacity = (1 - t) * 0.65;
       final paint = Paint()
         ..color = color.withValues(alpha: opacity)
@@ -347,17 +363,18 @@ class _RipplePainter extends CustomPainter {
       old.progress != progress || old.scale != scale;
 }
 
-// ── sparkle painter ───────────────────────────────────────────────────────────
+// ── Phase 3: 24개 파티클 painter (별 + 번개) ─────────────────────────────────
 
-class _SparklePainter extends CustomPainter {
+class _SortieParticlePainter extends CustomPainter {
   final double progress;
   final Color color;
   final Color accentColor;
   final Size size;
 
-  static const _kSparkleCount = 18;
+  static const _count = 24;
+  static final _rng = math.Random(42);
 
-  _SparklePainter({
+  _SortieParticlePainter({
     required this.progress,
     required this.color,
     required this.accentColor,
@@ -366,57 +383,71 @@ class _SparklePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size canvasSize) {
-    final rng = math.Random(42);
     final cx = canvasSize.width / 2;
     final cy = canvasSize.height * 0.38;
 
-    for (int i = 0; i < _kSparkleCount; i++) {
-      // each sparkle has its own phase offset
-      final phaseOffset = i / _kSparkleCount;
+    for (int i = 0; i < _count; i++) {
+      final phaseOffset = i / _count;
       final t = ((progress - phaseOffset + 1.0) % 1.0);
-      final fade = math.sin(t * math.pi);
+      final fade = math.sin(t * math.pi).clamp(0.0, 1.0);
       if (fade < 0.01) continue;
 
-      final angle = (i / _kSparkleCount) * 2 * math.pi +
-          progress * math.pi * 0.4;
-      final radius = 80.0 + rng.nextDouble() * 160.0;
+      final angle =
+          (i / _count) * 2 * math.pi + progress * math.pi * 0.4;
+      final radius = 80.0 + _rng.nextDouble() * 160.0;
       final x = cx + math.cos(angle) * radius;
       final y = cy + math.sin(angle) * radius * 0.6;
-      final starSize = 2.0 + rng.nextDouble() * 4.0;
-
-      final isAccent = i % 3 == 0;
+      final pSize = 2.5 + _rng.nextDouble() * 5.5;
+      final useAccent = i % 3 == 0;
       final paint = Paint()
-        ..color = (isAccent ? accentColor : color)
-            .withValues(alpha: fade * 0.75)
+        ..color = (useAccent ? accentColor : color)
+            .withValues(alpha: fade * 0.8)
         ..style = PaintingStyle.fill;
 
-      // draw 4-pointed star
-      _drawStar(canvas, Offset(x, y), starSize, paint);
+      // alternate star and lightning
+      if (i % 2 == 0) {
+        _drawStar(canvas, Offset(x, y), pSize, paint);
+      } else {
+        _drawLightning(canvas, Offset(x, y), pSize, paint);
+      }
     }
   }
 
-  void _drawStar(Canvas canvas, Offset center, double size, Paint paint) {
+  void _drawStar(Canvas canvas, Offset c, double s, Paint p) {
     final path = Path();
     for (int j = 0; j < 4; j++) {
-      final outerAngle = j * math.pi / 2 - math.pi / 4;
-      final innerAngle = outerAngle + math.pi / 4;
-      final outerX = center.dx + math.cos(outerAngle) * size;
-      final outerY = center.dy + math.sin(outerAngle) * size;
-      final innerX = center.dx + math.cos(innerAngle) * size * 0.38;
-      final innerY = center.dy + math.sin(innerAngle) * size * 0.38;
+      final outerA = j * math.pi / 2 - math.pi / 4;
+      final innerA = outerA + math.pi / 4;
+      final ox = c.dx + math.cos(outerA) * s;
+      final oy = c.dy + math.sin(outerA) * s;
+      final ix = c.dx + math.cos(innerA) * s * 0.38;
+      final iy = c.dy + math.sin(innerA) * s * 0.38;
       if (j == 0) {
-        path.moveTo(outerX, outerY);
+        path.moveTo(ox, oy);
       } else {
-        path.lineTo(outerX, outerY);
+        path.lineTo(ox, oy);
       }
-      path.lineTo(innerX, innerY);
+      path.lineTo(ix, iy);
     }
     path.close();
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, p);
+  }
+
+  void _drawLightning(Canvas canvas, Offset c, double s, Paint p) {
+    final path = Path()
+      ..moveTo(c.dx + s * 0.2, c.dy - s)
+      ..lineTo(c.dx - s * 0.1, c.dy - s * 0.05)
+      ..lineTo(c.dx + s * 0.3, c.dy - s * 0.05)
+      ..lineTo(c.dx - s * 0.2, c.dy + s)
+      ..lineTo(c.dx + s * 0.1, c.dy + s * 0.05)
+      ..lineTo(c.dx - s * 0.3, c.dy + s * 0.05)
+      ..close();
+    canvas.drawPath(path, p);
   }
 
   @override
-  bool shouldRepaint(_SparklePainter old) => old.progress != progress;
+  bool shouldRepaint(_SortieParticlePainter old) =>
+      old.progress != progress;
 }
 
 // ── charging content ──────────────────────────────────────────────────────────
@@ -431,34 +462,39 @@ class _ChargingContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 마스코트 히어로 (실제 마스코트 PNG, 투명 배경)
+        // 마스코트 + 다중 펄스 글로우
         AnimatedBuilder(
           animation: pulseCtrl,
           builder: (context, child) {
-            final scale = 1.0 + pulseCtrl.value * 0.06;
+            final s = 1.0 + pulseCtrl.value * 0.06;
             final glowOpacity = 0.3 + pulseCtrl.value * 0.4;
             return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (team.primary as Color)
-                          .withValues(alpha: glowOpacity),
-                      blurRadius: 56,
-                      spreadRadius: 16,
-                    ),
-                  ],
+              scale: s,
+              child: DMultiPulseGlow(
+                color: team.primary as Color,
+                accentColor: team.accent as Color,
+                size: 220,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (team.primary as Color)
+                            .withValues(alpha: glowOpacity),
+                        blurRadius: 56,
+                        spreadRadius: 16,
+                      ),
+                    ],
+                  ),
+                  child: child,
                 ),
-                child: child,
               ),
             );
           },
           child: Image.asset(
-            (team.mascotAsset as String),
+            team.mascotAsset as String,
             width: 200,
             height: 200,
             fit: BoxFit.contain,
@@ -483,7 +519,7 @@ class _ChargingContent extends StatelessWidget {
 
         const SizedBox(height: DTokens.s32),
 
-        // CHARGING... VT323 LED
+        // CHARGING... LED text
         Text(
           'CHARGING...',
           style: DType.scoreboardDigital(28,
@@ -502,7 +538,6 @@ class _ChargingContent extends StatelessWidget {
 
         const SizedBox(height: DTokens.s16),
 
-        // 서브 텍스트
         Text(
           (team.teamName as String).toUpperCase(),
           style: DType.label(12,
@@ -555,7 +590,7 @@ class _ExplodeContent extends StatelessWidget {
       children: [
         // 마스코트 scale-up 폭발
         Image.asset(
-          (team.mascotAsset as String),
+          team.mascotAsset as String,
           width: 240,
           height: 240,
           fit: BoxFit.contain,
@@ -576,17 +611,13 @@ class _ExplodeContent extends StatelessWidget {
 
         const SizedBox(height: DTokens.s20),
 
-        // 출정! — DImpactText gradient
-        DImpactText(
-          text: '출정!',
-          size: 88,
-          gradient: true,
-        )
+        // 출정! — impact gradient
+        DImpactText(text: '출정!', size: 88, gradient: true)
             .animate()
             .scale(
               begin: const Offset(0.2, 0.2),
               duration: 500.ms,
-              curve: Curves.easeOutBack,
+              curve: Curves.elasticOut,
             )
             .fadeIn(duration: 220.ms),
       ],
@@ -600,10 +631,13 @@ class _CompleteContent extends StatelessWidget {
   final dynamic team;
   final bool pointVisible;
   final AnimationController floatCtrl;
+  final AnimationController shimmerCtrl;
+
   const _CompleteContent({
     required this.team,
     required this.pointVisible,
     required this.floatCtrl,
+    required this.shimmerCtrl,
   });
 
   @override
@@ -611,7 +645,7 @@ class _CompleteContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 마스코트 플로팅 (float animation)
+        // 마스코트 플로팅
         AnimatedBuilder(
           animation: floatCtrl,
           builder: (context, child) => Transform.translate(
@@ -619,7 +653,7 @@ class _CompleteContent extends StatelessWidget {
             child: child,
           ),
           child: Image.asset(
-            (team.mascotAsset as String),
+            team.mascotAsset as String,
             width: 160,
             height: 160,
             fit: BoxFit.contain,
@@ -641,19 +675,17 @@ class _CompleteContent extends StatelessWidget {
 
         const SizedBox(height: DTokens.s20),
 
-        // 거대 "출정" — Anton impact with gradient mask
-        DImpactText(
-          text: '출정',
-          size: 96,
-          gradient: true,
-        )
+        // 거대 "출정" — impact gradient
+        DImpactText(text: '출정', size: 96, gradient: true)
             .animate()
             .fadeIn(delay: 200.ms, duration: 500.ms)
-            .slideY(begin: -0.15, curve: Curves.easeOutCubic),
+            .slideY(
+              begin: -0.15,
+              curve: Curves.easeOutCubic,
+            ),
 
         const SizedBox(height: DTokens.s8),
 
-        // 팀명 label
         Text(
           (team.teamName as String).toUpperCase(),
           style: DType.label(12, color: team.primary as Color),
@@ -661,15 +693,15 @@ class _CompleteContent extends StatelessWidget {
 
         const SizedBox(height: DTokens.s24),
 
-        // +50 P — VT323 scoreboardDigital
-        if (pointVisible)
-          _PointBadge(team: team),
+        // Phase 3: +50P 큰 텍스트 (heading 64) + shimmer
+        if (pointVisible) _PointBadge(team: team),
 
         const SizedBox(height: DTokens.s24),
 
-        // tagline 인용 — body italic
+        // tagline 인용
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: DTokens.s40),
+          padding:
+              const EdgeInsets.symmetric(horizontal: DTokens.s40),
           child: Column(
             children: [
               Text(
@@ -695,7 +727,7 @@ class _CompleteContent extends StatelessWidget {
   }
 }
 
-// ── point badge ───────────────────────────────────────────────────────────────
+// ── point badge — Phase 3: heading(64) + shimmer ──────────────────────────────
 
 class _PointBadge extends StatelessWidget {
   final dynamic team;
@@ -703,60 +735,58 @@ class _PointBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: DTokens.s24, vertical: DTokens.s12),
-      decoration: BoxDecoration(
-        color: (team.primary as Color).withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(DTokens.rPill),
-        border: Border.all(
-          color: (team.primary as Color).withValues(alpha: 0.55),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (team.primary as Color).withValues(alpha: 0.45),
-            blurRadius: 28,
-            spreadRadius: 2,
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 2000),
+      highlightOpacity: 0.28,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: DTokens.s24, vertical: DTokens.s12),
+        decoration: BoxDecoration(
+          color: (team.primary as Color).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(DTokens.rPill),
+          border: Border.all(
+            color: (team.primary as Color).withValues(alpha: 0.55),
+            width: 1.5,
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/icons/trophy.png',
-            width: 22,
-            height: 22,
-            errorBuilder: (e, s, t) => Icon(
-              Icons.emoji_events_rounded,
-              size: 22,
-              color: team.primary as Color,
+          boxShadow: [
+            BoxShadow(
+              color: (team.primary as Color).withValues(alpha: 0.45),
+              blurRadius: 28,
+              spreadRadius: 2,
             ),
-          ),
-          const SizedBox(width: DTokens.s12),
-          // VT323 LED 숫자
-          Text(
-            '+50',
-            style: DType.scoreboardDigital(36,
-                color: Colors.white),
-          ),
-          const SizedBox(width: DTokens.s4),
-          Text(
-            'P 적립',
-            style: DType.label(14, color: Colors.white),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/icons/trophy.png',
+              width: 22,
+              height: 22,
+              errorBuilder: (e, s, t) => Icon(
+                Icons.emoji_events_rounded,
+                size: 22,
+                color: team.primary as Color,
+              ),
+            ),
+            const SizedBox(width: DTokens.s12),
+            // Phase 3: heading(64) 큰 텍스트
+            Text(
+              '+50',
+              style: DType.heading(64, color: Colors.white),
+            ),
+            const SizedBox(width: DTokens.s4),
+            Text(
+              'P 적립',
+              style: DType.label(16, color: Colors.white),
+            ),
+          ],
+        ),
       ),
     )
         .animate()
         .slideY(begin: 0.5, duration: 600.ms, curve: Curves.easeOutCubic)
-        .fadeIn(duration: 400.ms)
-        .shimmer(
-          delay: 600.ms,
-          duration: 1400.ms,
-          color: Colors.white.withValues(alpha: 0.3),
-        );
+        .fadeIn(duration: 400.ms);
   }
 }
 
@@ -785,7 +815,7 @@ class _CompleteBottom extends StatelessWidget {
         ),
         child: Text(
           '완료',
-          style: DType.impact(20, color: Colors.white, letterSpacing: 3),
+          style: DType.heading(20, color: Colors.white),
         ),
       )
           .animate()
@@ -795,7 +825,7 @@ class _CompleteBottom extends StatelessWidget {
   }
 }
 
-// ── painters ──────────────────────────────────────────────────────────────────
+// ── scanline painter ──────────────────────────────────────────────────────────
 
 class _SortieScanPainter extends CustomPainter {
   final double progress;
@@ -822,32 +852,4 @@ class _SortieScanPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SortieScanPainter old) => old.progress != progress;
-}
-
-class _DiamondPainter extends CustomPainter {
-  final Color color;
-  _DiamondPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 0.7
-      ..style = PaintingStyle.stroke;
-    const step = 40.0;
-    for (double y = -step; y < size.height + step; y += step) {
-      for (double x = -step; x < size.width + step; x += step) {
-        final path = Path()
-          ..moveTo(x + step / 2, y)
-          ..lineTo(x + step, y + step / 2)
-          ..lineTo(x + step / 2, y + step)
-          ..lineTo(x, y + step / 2)
-          ..close();
-        canvas.drawPath(path, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

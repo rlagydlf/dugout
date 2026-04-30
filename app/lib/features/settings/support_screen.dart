@@ -6,9 +6,9 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../shared/widgets/d_button.dart';
-import '../../shared/widgets/d_card.dart';
+import '../../shared/widgets/d_glass_panel.dart';
 
-// ── FAQ mock ──────────────────────────────────────────────────────────────────
+// ── FAQ 데이터 ────────────────────────────────────────────────────────────────
 
 class _Faq {
   final String q;
@@ -60,9 +60,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 
   Future<void> _send() async {
-    if (_subjectCtrl.text.trim().isEmpty || _bodyCtrl.text.trim().isEmpty) {
+    if (_subjectCtrl.text.trim().isEmpty ||
+        _bodyCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('제목과 내용을 모두 입력해 주세요.')),
+        SnackBar(
+          content: Text('제목과 내용을 모두 입력해 주세요.',
+              style: DType.body(14).copyWith(color: Colors.white)),
+          backgroundColor: DTokens.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DTokens.r12)),
+        ),
       );
       return;
     }
@@ -74,10 +82,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     _bodyCtrl.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('문의가 접수되었습니다. 24시간 내 답변드립니다.'),
+        content: Text('문의가 접수되었습니다. 24시간 내 답변드립니다.',
+            style: DType.body(14).copyWith(color: Colors.white)),
         backgroundColor: context.team.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DTokens.r12)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DTokens.r12)),
       ),
     );
   }
@@ -87,83 +97,160 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     final team = context.team;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('FAQ / 1:1 문의')),
+      backgroundColor: DTokens.bgDark,
+      appBar: AppBar(
+        backgroundColor: DTokens.bgDark,
+        elevation: 0,
+        title: Text('FAQ / 1:1 문의',
+            style: DType.heading(17, color: Colors.white)),
+      ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-          DTokens.s16, DTokens.s16, DTokens.s16,
-          MediaQuery.of(context).padding.bottom + DTokens.s24,
+          DTokens.s16,
+          DTokens.s8,
+          DTokens.s16,
+          MediaQuery.of(context).padding.bottom + DTokens.s32,
         ),
         children: [
-          // FAQ
+          // ── FAQ 섹션 헤더
           Row(
             children: [
-              Icon(Icons.quiz_rounded, size: 18, color: team.primary),
+              Icon(Icons.quiz_rounded, size: 16, color: team.primary),
               const SizedBox(width: DTokens.s8),
-              Text('자주 묻는 질문',
-                  style: DType.body(18, FontWeight.w800).copyWith(color: DTokens.textPrimaryDark)),
+              Text(
+                '자주 묻는 질문',
+                style: DType.body(16, FontWeight.w800)
+                    .copyWith(color: DTokens.textPrimaryDark),
+              ),
             ],
-          ),
+          ).animate().fadeIn(),
+
           const SizedBox(height: DTokens.s12),
+
           ..._faqs.asMap().entries.map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: DTokens.s8),
               child: _FaqTile(faq: e.value)
                   .animate()
-                  .fadeIn(delay: Duration(milliseconds: 60 * e.key)),
+                  .fadeIn(delay: Duration(milliseconds: 60 * e.key))
+                  .slideY(begin: 0.04),
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: DTokens.s28),
 
-          // 1:1 문의
+          // ── 1:1 문의 섹션
           Row(
             children: [
-              Icon(Icons.support_agent_rounded, size: 18, color: team.primary),
+              Icon(Icons.support_agent_rounded,
+                  size: 16, color: team.primary),
               const SizedBox(width: DTokens.s8),
-              const Text('1:1 문의',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              Text(
+                '1:1 문의',
+                style: DType.body(16, FontWeight.w800)
+                    .copyWith(color: DTokens.textPrimaryDark),
+              ),
             ],
-          ),
+          ).animate().fadeIn(delay: 350.ms),
+
           const SizedBox(height: DTokens.s4),
-          const Text('평일 09:00~18:00 답변 · 24시간 내 답변',
-              style: TextStyle(fontSize: 12, color: DTokens.textTertiaryDark)),
+
+          Text(
+            '평일 09:00~18:00 답변 · 24시간 내 처리',
+            style: DType.caption(12, color: DTokens.textTertiaryDark),
+          ).animate().fadeIn(delay: 380.ms),
+
           const SizedBox(height: DTokens.s16),
-          DCard(
+
+          DGlassPanel(
+            padding: const EdgeInsets.all(DTokens.s20),
+            radius: DTokens.r20,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('제목',
+                    style: DType.label(11,
+                        color: team.primary.withValues(alpha: 0.85),
+                        letterSpacing: 1.5)),
+                const SizedBox(height: DTokens.s8),
                 TextField(
                   controller: _subjectCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '제목',
+                  style: DType.body(14).copyWith(color: Colors.white),
+                  decoration: InputDecoration(
                     hintText: '문의 제목을 입력하세요',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: DTokens.s12),
-                TextField(
-                  controller: _bodyCtrl,
-                  minLines: 4,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: '내용',
-                    hintText: '문의 내용을 자세히 입력해 주세요',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    hintStyle: DType.body(14).copyWith(
+                        color: Colors.white.withValues(alpha: 0.25)),
+                    filled: true,
+                    fillColor: DTokens.surfaceDark,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          const BorderSide(color: DTokens.borderDark),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          const BorderSide(color: DTokens.borderDark),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          BorderSide(color: team.primary, width: 1.5),
+                    ),
                   ),
                 ),
                 const SizedBox(height: DTokens.s16),
-                DButton(label: '문의 보내기', icon: Icons.send_rounded, loading: _sending, onPressed: _send),
+                Text('내용',
+                    style: DType.label(11,
+                        color: team.primary.withValues(alpha: 0.85),
+                        letterSpacing: 1.5)),
+                const SizedBox(height: DTokens.s8),
+                TextField(
+                  controller: _bodyCtrl,
+                  minLines: 4,
+                  maxLines: 7,
+                  style: DType.body(14).copyWith(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: '문의 내용을 자세히 입력해 주세요',
+                    hintStyle: DType.body(14).copyWith(
+                        color: Colors.white.withValues(alpha: 0.25)),
+                    alignLabelWithHint: true,
+                    filled: true,
+                    fillColor: DTokens.surfaceDark,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          const BorderSide(color: DTokens.borderDark),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          const BorderSide(color: DTokens.borderDark),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DTokens.r12),
+                      borderSide:
+                          BorderSide(color: team.primary, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DTokens.s20),
+                DButton(
+                  label: '문의 보내기',
+                  icon: Icons.send_rounded,
+                  loading: _sending,
+                  onPressed: _send,
+                ),
               ],
             ),
-          ).animate().fadeIn(delay: 300.ms),
+          ).animate().fadeIn(delay: 400.ms),
         ],
       ),
     );
   }
 }
 
-// ── FAQ 확장형 타일 ───────────────────────────────────────────────────────────
+// ── FAQ 확장 타일 ─────────────────────────────────────────────────────────────
 
 class _FaqTile extends StatefulWidget {
   final _Faq faq;
@@ -172,61 +259,100 @@ class _FaqTile extends StatefulWidget {
   State<_FaqTile> createState() => _FaqTileState();
 }
 
-class _FaqTileState extends State<_FaqTile> {
+class _FaqTileState extends State<_FaqTile>
+    with SingleTickerProviderStateMixin {
   bool _open = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _rotateAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 220));
+    _rotateAnim = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return DCard(
+    return DGlassPanel(
       padding: EdgeInsets.zero,
-      onTap: () => setState(() => _open = !_open),
+      radius: DTokens.r16,
+      onTap: () {
+        setState(() => _open = !_open);
+        _open ? _ctrl.forward() : _ctrl.reverse();
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: DTokens.s16, vertical: DTokens.s12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: DTokens.s16, vertical: DTokens.s14),
             child: Row(
               children: [
-                Text('Q', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: team.primary)),
+                Text('Q',
+                    style: DType.body(14, FontWeight.w900)
+                        .copyWith(color: team.primary)),
                 const SizedBox(width: DTokens.s8),
                 Expanded(
-                  child: Text(widget.faq.q,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    widget.faq.q,
+                    style: DType.body(14, FontWeight.w600)
+                        .copyWith(color: DTokens.textPrimaryDark),
+                  ),
                 ),
-                AnimatedRotation(
-                  turns: _open ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
+                RotationTransition(
+                  turns: _rotateAnim,
                   child: const Icon(Icons.keyboard_arrow_down_rounded,
                       size: 20, color: DTokens.textTertiaryDark),
                 ),
               ],
             ),
           ),
-          if (_open) ...[
-            const Divider(color: DTokens.borderDark, height: 1),
-            Padding(
-              padding: const EdgeInsets.all(DTokens.s16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('A', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: team.primary)),
-                  const SizedBox(width: DTokens.s8),
-                  Expanded(
-                    child: Text(widget.faq.a,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: DTokens.textSecondaryDark,
-                          height: 1.6,
-                        )),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 260),
+            crossFadeState: _open
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              children: [
+                const Divider(color: DTokens.borderDark, height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(DTokens.s16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('A',
+                          style: DType.body(14, FontWeight.w900)
+                              .copyWith(color: team.primary)),
+                      const SizedBox(width: DTokens.s8),
+                      Expanded(
+                        child: Text(
+                          widget.faq.a,
+                          style: DType.body(13).copyWith(
+                            color: DTokens.textSecondaryDark,
+                            height: 1.65,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 }
-

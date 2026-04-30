@@ -6,9 +6,7 @@ import '../../app/theme/app_theme.dart';
 import '../../app/theme/tokens.dart';
 import '../../app/theme/typography.dart';
 import '../../core/providers/app_providers.dart';
-import '../../shared/widgets/d_glass_panel.dart';
-import '../../shared/widgets/d_scoreboard.dart';
-
+import '../../shared/widgets/d_effects.dart';
 // ── icon mapping ──────────────────────────────────────────────────────────────
 
 String _categoryIcon(String cat) {
@@ -145,7 +143,7 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
       ),
       body: CustomScrollView(
         slivers: [
-          // ── 포인트 요약 배너
+          // ── 포인트 요약 배너 (DShimmerSweep)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s8, DTokens.s16, 0),
@@ -164,29 +162,31 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
             ),
           ),
 
-          // ── 추천 가로 스크롤 (전체 탭만)
+          // ── 추천 가로 스크롤 (전체 탭만) — FEATURED
           if (_catIndex == 0) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s4, DTokens.s16, 0),
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/images/icons/bolt.png',
-                      width: 14,
-                      height: 14,
-                      errorBuilder: (e, s, t) =>
-                          Icon(Icons.bolt_rounded, size: 14, color: DTokens.warning),
+                    DMultiPulseGlow(
+                      color: DTokens.warning,
+                      accentColor: Colors.orange,
+                      size: 10,
+                      child: Container(
+                        width: 10, height: 10,
+                        decoration: const BoxDecoration(color: DTokens.warning, shape: BoxShape.circle),
+                      ),
                     ),
                     const SizedBox(width: DTokens.s8),
-                    Text('FEATURED', style: DType.badge(11, color: DTokens.warning)),
+                    Text('FEATURED', style: DType.badge(12, color: DTokens.warning)),
                   ],
                 ),
               ),
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 196,
+                height: 200,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s12, DTokens.s16, DTokens.s8),
@@ -194,7 +194,9 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
                   separatorBuilder: (e, s) => const SizedBox(width: DTokens.s12),
                   itemBuilder: (context, i) {
                     final r = _allRewards.where((r) => r.featured).toList()[i];
-                    return _FeaturedCard(reward: r, userPoint: user.point)
+                    return D3DTiltCard(
+                      child: _FeaturedCard(reward: r, userPoint: user.point),
+                    )
                         .animate()
                         .fadeIn(delay: Duration(milliseconds: 80 * i))
                         .slideX(begin: 0.08);
@@ -202,27 +204,22 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
                 ),
               ),
             ),
+            // HOT ITEMS 헤더
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s16, DTokens.s16, 0),
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/images/icons/megaphone.png',
-                      width: 14,
-                      height: 14,
-                      errorBuilder: (e, s, t) =>
-                          Icon(Icons.local_fire_department_rounded, size: 14, color: DTokens.danger),
-                    ),
+                    Icon(Icons.local_fire_department_rounded, size: 16, color: DTokens.danger),
                     const SizedBox(width: DTokens.s8),
-                    Text('HOT ITEMS', style: DType.badge(11, color: DTokens.danger)),
+                    Text('HOT ITEMS', style: DType.badge(12, color: DTokens.danger)),
                   ],
                 ),
               ),
             ),
           ],
 
-          // ── 메인 그리드
+          // ── 메인 그리드 (D3DTiltCard)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s12, DTokens.s16, DTokens.s16),
             sliver: SliverGrid(
@@ -232,7 +229,9 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
                       ? _allRewards.where((r) => r.hot || !r.featured).toList()
                       : filtered;
                   if (i >= list.length) return null;
-                  return _RewardCard(reward: list[i], userPoint: user.point)
+                  return D3DTiltCard(
+                    child: _RewardCard(reward: list[i], userPoint: user.point),
+                  )
                       .animate()
                       .fadeIn(delay: Duration(milliseconds: 50 * i))
                       .slideY(begin: 0.06);
@@ -257,15 +256,9 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
                 padding: const EdgeInsets.fromLTRB(DTokens.s16, DTokens.s8, DTokens.s16, 0),
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/images/icons/scoreboard.png',
-                      width: 14,
-                      height: 14,
-                      errorBuilder: (e, s, t) =>
-                          Icon(Icons.timer_rounded, size: 14, color: DTokens.warning),
-                    ),
+                    Icon(Icons.timer_rounded, size: 14, color: DTokens.warning),
                     const SizedBox(width: DTokens.s8),
-                    Text('CLOSING SOON', style: DType.badge(11, color: DTokens.warning)),
+                    Text('CLOSING SOON', style: DType.badge(12, color: DTokens.warning)),
                   ],
                 ),
               ),
@@ -284,7 +277,9 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
                     if (i >= closing.length) return null;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: DTokens.s8),
-                      child: _ClosingTile(reward: closing[i], userPoint: user.point)
+                      child: D3DTiltCard(
+                        child: _ClosingTile(reward: closing[i], userPoint: user.point),
+                      )
                           .animate()
                           .fadeIn(delay: Duration(milliseconds: 60 * i)),
                     );
@@ -304,7 +299,7 @@ class _RewardListScreenState extends ConsumerState<RewardListScreen> {
   }
 }
 
-// ── balance banner ────────────────────────────────────────────────────────────
+// ── balance banner (DShimmerSweep) ───────────────────────────────────────────
 
 class _BalanceBanner extends StatelessWidget {
   final int point;
@@ -313,56 +308,68 @@ class _BalanceBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = context.team;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(DTokens.r20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: DTokens.s20, vertical: DTokens.s16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              team.primary.withValues(alpha: 0.22),
-              team.secondary.withValues(alpha: 0.12),
+    return DShimmerSweep(
+      period: const Duration(milliseconds: 2800),
+      highlightOpacity: 0.16,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(DTokens.r20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DTokens.s20, vertical: DTokens.s16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                team.primary.withValues(alpha: 0.25),
+                team.secondary.withValues(alpha: 0.14),
+              ],
+            ),
+            border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(DTokens.r20),
+            boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.20), blurRadius: 20, offset: const Offset(0, 6))],
+          ),
+          child: Stack(
+            children: [
+              // 다이아몬드 그리드 배경
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: DDiamondGridPainter(team.primary.withValues(alpha: 0.08), step: 28),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: team.primary.withValues(alpha: 0.20),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: team.primary.withValues(alpha: 0.4)),
+                    ),
+                    child: const Center(child: Icon(Icons.diamond_rounded, size: 22, color: Colors.white)),
+                  ),
+                  const SizedBox(width: DTokens.s12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('보유 포인트', style: DType.label(11, color: DTokens.textTertiaryDark)),
+                        Text('${_fmt(point)} P', style: DType.scoreboardDigital(26, color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: DTokens.s12, vertical: DTokens.s8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [team.primary, Color.lerp(team.primary, team.secondary, 0.5)!]),
+                      borderRadius: BorderRadius.circular(DTokens.rPill),
+                      boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 12)],
+                    ),
+                    child: Text('충전', style: DType.badge(12, color: Colors.white)),
+                  ),
+                ],
+              ),
             ],
           ),
-          border: Border.all(color: team.primary.withValues(alpha: 0.28)),
-          borderRadius: BorderRadius.circular(DTokens.r20),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.diamond_rounded, size: 20, color: team.primary),
-            const SizedBox(width: DTokens.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '보유 포인트',
-                    style: DType.label(11, color: DTokens.textTertiaryDark),
-                  ),
-                  Text(
-                    '${_fmt(point)} P',
-                    style: DType.mono(22, color: Colors.white, weight: FontWeight.w900),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: DTokens.s12, vertical: DTokens.s8),
-              decoration: BoxDecoration(
-                color: team.primary,
-                borderRadius: BorderRadius.circular(DTokens.rPill),
-                boxShadow: [
-                  BoxShadow(
-                    color: team.primary.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Text('충전', style: DType.badge(12, color: Colors.white)),
-            ),
-          ],
         ),
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05);
@@ -380,7 +387,7 @@ class _CategoryFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     final team = context.team;
     return SizedBox(
-      height: 36,
+      height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: DTokens.s16),
@@ -398,14 +405,10 @@ class _CategoryFilter extends StatelessWidget {
                 borderRadius: BorderRadius.circular(DTokens.rPill),
                 border: Border.all(
                   color: active ? team.primary : DTokens.borderDark,
+                  width: active ? 1.5 : 1.0,
                 ),
                 boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: team.primary.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                        ),
-                      ]
+                    ? [BoxShadow(color: team.primary.withValues(alpha: 0.5), blurRadius: 10)]
                     : null,
               ),
               child: Text(
@@ -420,7 +423,7 @@ class _CategoryFilter extends StatelessWidget {
   }
 }
 
-// ── featured card (horizontal scroll) ─────────────────────────────────────────
+// ── featured card (horizontal scroll, D3DTiltCard 래퍼 없이) ─────────────────
 
 class _FeaturedCard extends StatelessWidget {
   final _Reward reward;
@@ -433,18 +436,12 @@ class _FeaturedCard extends StatelessWidget {
     final canBuy = userPoint >= reward.price;
 
     return Container(
-      width: 156,
+      width: 160,
       decoration: BoxDecoration(
         color: DTokens.surfaceDark,
         borderRadius: BorderRadius.circular(DTokens.r20),
-        border: Border.all(color: team.primary.withValues(alpha: 0.28)),
-        boxShadow: [
-          BoxShadow(
-            color: team.primary.withValues(alpha: 0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: team.primary.withValues(alpha: 0.35)),
+        boxShadow: [BoxShadow(color: team.primary.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 6))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,14 +449,14 @@ class _FeaturedCard extends StatelessWidget {
         children: [
           // 아이콘 영역
           Container(
-            height: 84,
+            height: 90,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  team.primary.withValues(alpha: 0.22),
-                  team.secondary.withValues(alpha: 0.12),
+                  team.primary.withValues(alpha: 0.25),
+                  team.secondary.withValues(alpha: 0.14),
                 ],
               ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(DTokens.r20)),
@@ -467,10 +464,12 @@ class _FeaturedCard extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
+                CustomPaint(
+                  painter: DDiamondGridPainter(team.primary.withValues(alpha: 0.08), step: 24),
+                ),
                 Image.asset(
                   _categoryIcon(reward.category),
-                  width: 52,
-                  height: 52,
+                  width: 52, height: 52,
                   color: team.primary,
                   colorBlendMode: BlendMode.srcIn,
                   errorBuilder: (e, s, t) =>
@@ -478,15 +477,14 @@ class _FeaturedCard extends StatelessWidget {
                 ),
                 if (reward.closing)
                   Positioned(
-                    top: DTokens.s8,
-                    right: DTokens.s8,
+                    top: DTokens.s8, right: DTokens.s8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: DTokens.danger,
                         borderRadius: BorderRadius.circular(DTokens.rPill),
                       ),
-                      child: Text('마감임박', style: DType.label(11, color: Colors.white)),
+                      child: Text('마감임박', style: DType.label(10, color: Colors.white)),
                     )
                         .animate(onPlay: (c) => c.repeat(reverse: true))
                         .fade(begin: 0.6, end: 1.0, duration: 700.ms),
@@ -500,24 +498,18 @@ class _FeaturedCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  reward.category,
-                  style: DType.label(11, color: DTokens.textTertiaryDark),
-                ),
+                Text(reward.category, style: DType.label(10, color: DTokens.textTertiaryDark)),
                 const SizedBox(height: DTokens.s4),
                 Text(
                   reward.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: DType.body(14, FontWeight.w700)
-                      .copyWith(color: DTokens.textPrimaryDark, height: 1.3),
+                  style: DType.body(13, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark, height: 1.3),
                 ),
                 const SizedBox(height: DTokens.s4),
                 Text(
                   '${_fmt(reward.price)} P',
-                  style: DType.mono(14,
-                      color: canBuy ? team.primary : DTokens.textTertiaryDark,
-                      weight: FontWeight.w900),
+                  style: DType.mono(14, color: canBuy ? team.primary : DTokens.textTertiaryDark, weight: FontWeight.w900),
                 ),
               ],
             ),
@@ -528,7 +520,7 @@ class _FeaturedCard extends StatelessWidget {
   }
 }
 
-// ── reward grid card ──────────────────────────────────────────────────────────
+// ── reward grid card (D3DTiltCard 래퍼 없이) ──────────────────────────────────
 
 class _RewardCard extends StatelessWidget {
   final _Reward reward;
@@ -540,10 +532,18 @@ class _RewardCard extends StatelessWidget {
     final team = context.team;
     final canBuy = userPoint >= reward.price;
 
-    return DGlassPanel(
-      padding: EdgeInsets.zero,
-      radius: DTokens.r16,
-      onTap: () {},
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r16),
+        border: Border.all(
+          color: reward.hot ? team.primary.withValues(alpha: 0.4) : DTokens.borderDark,
+        ),
+        boxShadow: reward.hot
+            ? [BoxShadow(color: team.primary.withValues(alpha: 0.12), blurRadius: 14, offset: const Offset(0, 4))]
+            : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -567,8 +567,7 @@ class _RewardCard extends StatelessWidget {
                   Center(
                     child: Image.asset(
                       _categoryIcon(reward.category),
-                      width: 44,
-                      height: 44,
+                      width: 44, height: 44,
                       color: team.primary,
                       colorBlendMode: BlendMode.srcIn,
                       errorBuilder: (e, s, t) =>
@@ -577,8 +576,7 @@ class _RewardCard extends StatelessWidget {
                   ),
                   if (reward.stock != null)
                     Positioned(
-                      top: DTokens.s8,
-                      right: DTokens.s8,
+                      top: DTokens.s8, right: DTokens.s8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
@@ -587,20 +585,16 @@ class _RewardCard extends StatelessWidget {
                               : DTokens.surfaceDark2,
                           borderRadius: BorderRadius.circular(DTokens.rPill),
                         ),
-                        child: Text(
-                          '${reward.stock}개',
-                          style: DType.label(11, color: Colors.white),
-                        ),
+                        child: Text('${reward.stock}개', style: DType.label(10, color: Colors.white)),
                       ),
                     ),
                   if (reward.hot)
                     Positioned(
-                      top: DTokens.s8,
-                      left: DTokens.s8,
+                      top: DTokens.s8, left: DTokens.s8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          color: DTokens.danger.withValues(alpha: 0.85),
+                          gradient: LinearGradient(colors: [DTokens.danger, Colors.deepOrangeAccent]),
                           borderRadius: BorderRadius.circular(DTokens.r4),
                         ),
                         child: Text('HOT', style: DType.badge(8, color: Colors.white)),
@@ -618,23 +612,20 @@ class _RewardCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(reward.category, style: DType.label(11, color: DTokens.textTertiaryDark)),
+                  Text(reward.category, style: DType.label(10, color: DTokens.textTertiaryDark)),
                   const SizedBox(height: DTokens.s4),
                   Expanded(
                     child: Text(
                       reward.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: DType.body(15, FontWeight.w700)
-                          .copyWith(color: DTokens.textPrimaryDark, height: 1.3),
+                      style: DType.body(14, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark, height: 1.3),
                     ),
                   ),
                   const SizedBox(height: DTokens.s4),
                   Text(
                     '${_fmt(reward.price)} P',
-                    style: DType.mono(15,
-                        color: canBuy ? team.primary : DTokens.textTertiaryDark,
-                        weight: FontWeight.w900),
+                    style: DType.mono(14, color: canBuy ? team.primary : DTokens.textTertiaryDark, weight: FontWeight.w900),
                   ),
                 ],
               ),
@@ -646,7 +637,7 @@ class _RewardCard extends StatelessWidget {
   }
 }
 
-// ── closing tile ──────────────────────────────────────────────────────────────
+// ── closing tile (D3DTiltCard 래퍼 없이) ─────────────────────────────────────
 
 class _ClosingTile extends StatelessWidget {
   final _Reward reward;
@@ -658,24 +649,27 @@ class _ClosingTile extends StatelessWidget {
     final team = context.team;
     final canBuy = userPoint >= reward.price;
 
-    return DGlassPanel(
+    return Container(
       padding: const EdgeInsets.all(DTokens.s16),
-      radius: DTokens.r16,
-      onTap: () {},
+      decoration: BoxDecoration(
+        color: DTokens.surfaceDark,
+        borderRadius: BorderRadius.circular(DTokens.r16),
+        border: Border.all(color: DTokens.danger.withValues(alpha: 0.35)),
+        boxShadow: [BoxShadow(color: DTokens.danger.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
       child: Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 52, height: 52,
             decoration: BoxDecoration(
               color: team.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(DTokens.r12),
+              border: Border.all(color: team.primary.withValues(alpha: 0.25)),
             ),
             child: Center(
               child: Image.asset(
                 _categoryIcon(reward.category),
-                width: 28,
-                height: 28,
+                width: 28, height: 28,
                 color: team.primary,
                 colorBlendMode: BlendMode.srcIn,
                 errorBuilder: (e, s, t) =>
@@ -688,21 +682,14 @@ class _ClosingTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  reward.name,
-                  style: DType.body(14, FontWeight.w700)
-                      .copyWith(color: DTokens.textPrimaryDark),
-                ),
+                Text(reward.name, style: DType.body(14, FontWeight.w700).copyWith(color: DTokens.textPrimaryDark)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     Text(reward.category, style: DType.label(11, color: DTokens.textTertiaryDark)),
                     if (reward.stock != null) ...[
                       const SizedBox(width: DTokens.s8),
-                      Text(
-                        '잔여 ${reward.stock}개',
-                        style: DType.label(11, color: DTokens.danger),
-                      ),
+                      Text('잔여 ${reward.stock}개', style: DType.label(11, color: DTokens.danger)),
                     ],
                   ],
                 ),
@@ -712,14 +699,12 @@ class _ClosingTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '${_fmt(reward.price)} P',
-                style: DType.mono(15,
-                    color: canBuy ? team.primary : DTokens.textTertiaryDark,
-                    weight: FontWeight.w900),
-              ),
+              Text('${_fmt(reward.price)} P',
+                  style: DType.mono(15, color: canBuy ? team.primary : DTokens.textTertiaryDark, weight: FontWeight.w900)),
               const SizedBox(height: 2),
-              Text('마감임박', style: DType.label(11, color: DTokens.warning)),
+              Text('마감임박', style: DType.label(11, color: DTokens.warning))
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .fade(begin: 0.5, end: 1.0, duration: 800.ms),
             ],
           ),
         ],
@@ -747,14 +732,7 @@ class _PointChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(
-            'assets/images/icons/baseball.png',
-            width: 12,
-            height: 12,
-            color: teamColor,
-            colorBlendMode: BlendMode.srcIn,
-            errorBuilder: (e, s, t) => Icon(Icons.diamond_rounded, size: 12, color: teamColor),
-          ),
+          Icon(Icons.diamond_rounded, size: 12, color: teamColor),
           const SizedBox(width: DTokens.s4),
           Text('${_fmt(point)} P', style: DType.mono(12, color: teamColor, weight: FontWeight.w700)),
         ],
