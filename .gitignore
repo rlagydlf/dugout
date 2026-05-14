@@ -47,6 +47,7 @@ app/android/app/release/
 
 # Claude Code / OMC
 .omc/
+.omx/
 .claude/
 
 # Logs / temp
