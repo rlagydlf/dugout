@@ -180,7 +180,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                     child: _step < 2
                         ? DButton(
-                            label: _step == 0 ? '다음 — 비밀번호' : '다음 — 약관 동의',
+                            label: '다음',
                             icon: Icons.arrow_forward_rounded,
                             onPressed: _nextStep,
                           )
